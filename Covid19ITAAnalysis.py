@@ -204,7 +204,7 @@ def nazionale_increment(nazionale, output_base, use_percentage=True, show=None, 
     if show == None:
         show = showGraph
 
-    data = nazionale_data(nazionale, compute_increments=True)#[['giorni', 'totale_casi']]
+    data = nazionale_data(nazionale, use_increments=True)#[['giorni', 'totale_casi']]
     #print(len(data['totale_casi']))
 
     incrementi = data['incrementi_percentuali'] if use_percentage else data['incrementi']
@@ -382,7 +382,7 @@ def regioni_increment(regioni, output_base, head_region=1, must_region=[15], use
     # print(data_reg.groupby(['codice_regione'], sort=False)['totale_casi'].transform(max).sort_values(ascending=False).head(5))
     # idx = data_reg.groupby(['codice_regione'], sort=False)['totale_casi'].transform(max) == data_reg['totale_casi']
 
-    data = regioni_data(regioni, head_region=head_region, must_region=must_region)
+    data = regioni_data(regioni, head_region=head_region, must_region=must_region, use_increments=True)
 
     for reg, values in data.items():
         denominazione = values['denominazione']
