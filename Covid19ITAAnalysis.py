@@ -14,7 +14,7 @@ storeGraph = False
 showGraph = False
 timestr = ''
 current_ref = ''
-force_graph_generation = True
+force_graph_generation = False
 
 def update_repo(repo_path, base_output_path='.'):
     head_file = Path(f'{base_output_path}/lastrev')
@@ -390,7 +390,6 @@ def regioni_increment(regioni, output_base, head_region=1, must_region=[15], use
         plt.close('all')
         figure = plt.figure(figsize=(16, 10))
         incrementi = values['incrementi_percentuali'] if use_percentage else values['incrementi']
-        plt.close('all')
         figure = plt.figure(figsize=(16, 10))
         y_pos = np.arange(len(values['giorni']))
         plt.bar(y_pos, incrementi, align='center', alpha=0.5)
@@ -517,6 +516,49 @@ def province_linear(province, output_base, target_region=15, show=None, store=No
                   target_region=target_region, show=show, store=store)
 
 
+def province_increment(province, output_base, target_region=15, use_percentage=True, show=None, store=None):
+    Path(output_base).mkdir(parents=True, exist_ok=True)
+    if store == None:
+        store = storeGraph
+
+    if show == None:
+        show = showGraph
+
+    plt.close('all')
+    figure = plt.figure(figsize=(16, 10))
+
+    data = province_data(province, target_region=target_region, use_increments=True)
+
+    for prov, values in data.items():
+        denominazione = values['denominazione']
+        regione = values['regione']
+        print(f'-> Generazione grafici a barre per {denominazione}')
+        plt.close('all')
+        figure = plt.figure(figsize=(16, 10))
+        incrementi = values['incrementi_percentuali'] if use_percentage else values['incrementi']
+        y_pos = np.arange(len(values['giorni']))
+        plt.bar(y_pos, incrementi, align='center', alpha=0.5)
+        plt.xticks(y_pos, values['giorni'])
+        plt.ylabel('Incremento casi giornaliero')
+        plt.xlabel('Giorni')
+        plt.xticks(rotation=90)
+        perc_text = " percentuale" if use_percentage else ""
+        plt.title(f'Incremento{perc_text} contagi COVID19 in {denominazione}')
+
+        for i in range(len(y_pos)):
+            label = "{0:.1%}".format(incrementi[i]) if use_percentage else f'{incrementi[i]}'
+            y_off = 0.01 if use_percentage else 0.1
+            plt.text(x=y_pos[i] - 0.25, y=incrementi[i] + 0.01, s=label, size=6)
+
+        base_filename = clean_filename(f'{regione}_{denominazione}_incrementi{perc_text}_{timestr}')
+        if store:
+            # print(f'Salvataggio di {output_base}{base_filename}')
+            plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
+            plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
+        if show:
+            plt.show()
+        plt.close(figure)
+
 def get_all_region(regioni):
     data_reg = pandas.read_csv(regioni)
 
@@ -567,11 +609,15 @@ if __name__ == '__main__':
         regioni_increment(regioni, output_base=output_base_reg, head_region=0, must_region=[], use_percentage=False)
         regioni_increment(regioni, output_base=output_base_reg, head_region=0, must_region=[], use_percentage=True)
         [codici_regione, data_reg] = get_all_region(regioni)
+        generate_bars = [3,15]
         for reg in codici_regione:
             idx = data_reg['codice_regione'] == reg
             denominazione = data_reg[idx].denominazione_regione.unique()[0]
             print(f'Generazione grafici provinciali per regione {denominazione}')
             province_linear(province, output_base=output_base_prov, target_region=reg)
             province_log(province, output_base=output_base_prov, target_region=reg)
+            if reg in generate_bars:
+                province_increment(province, output_base=output_base_prov, target_region=reg, use_percentage=False)
+                province_increment(province, output_base=output_base_prov, target_region=reg, use_percentage=True)
     else:
         print('Aggiornamento dei grafici non necessario')
