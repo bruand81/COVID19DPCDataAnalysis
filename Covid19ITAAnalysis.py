@@ -6,21 +6,18 @@ import unicodedata
 import string
 from git import Repo
 from git import RemoteProgress
-storeGraph = False
-showGraph = False
-timestr = ''
-current_ref = ''
-force_graph_generation = True
+
+force_graph_generation = False
 
 
 class DataManager:
     @staticmethod
     def nazionale_data(file_nazionale, use_increments=False):
         data_naz = pandas.read_csv(file_nazionale)
-        return DataManager.__parse_data(data_naz, use_increments=use_increments)
+        return DataManager.__parse_data(data_naz, denominazione="Italia", use_increments=use_increments)
 
     @staticmethod
-    def regioni_data(file_regioni, head_region, must_region, use_increments=False):
+    def regioni_data(file_regioni, head_region=0, must_region=None, use_increments=False):
         data_reg = pandas.read_csv(file_regioni)
         idx = data_reg.groupby(['codice_regione'])['totale_casi'].transform(max) == data_reg['totale_casi']
 
@@ -35,17 +32,18 @@ class DataManager:
                 "codice_regione"].to_numpy()
 
         if must_region is not None and len(must_region) > 0:
-            codici_regione = np.unique(np.concatenate((codici_regione, must_region)))
+            must_region_add = [x for x in must_region if x not in codici_regione]
+            codici_regione = np.concatenate((codici_regione, must_region_add))
+            #codici_regione = np.unique(np.concatenate((codici_regione, must_region)))
         return_data = {}
 
         for reg in codici_regione:
             data = data_reg[data_reg["codice_regione"] == reg]
             denominazione = ",".join(data.denominazione_regione.unique())
-            results = DataManager.__parse_data(data, use_increments=use_increments)
-            results["denominazione"] = denominazione
+            results = DataManager.__parse_data(data, denominazione=denominazione, use_increments=use_increments)
             return_data[reg] = results
 
-        return return_data
+        return return_data, codici_regione
 
     @staticmethod
     def province_data(file_province, target_region=15, use_increments=False):
@@ -61,18 +59,18 @@ class DataManager:
 
         for prov in codici_province:
             data = data_prov_in_reg[data_prov_in_reg["codice_provincia"] == prov]
-            X = np.array(list(xi[:10] for xi in data['data']))
-            Contagiati = data['totale_casi']
+            giorni = np.array(list(xi[:10] for xi in data['data']))
+            contagiati = data['totale_casi']
 
             (increments, increments_percentage, _, _) = DataManager.__compute_increments(
-                Contagiati) if use_increments else (
+                contagiati) if use_increments else (
                 None, None, None, None)
 
             return_data[prov] = {
                 "regione": data.denominazione_regione.unique()[0],
                 "denominazione": data.denominazione_provincia.unique()[0],
-                "giorni": X,
-                "totale_casi": Contagiati,
+                "giorni": giorni,
+                "totale_casi": contagiati,
                 "incrementi": increments,
                 "incrementi_percentuali": increments_percentage
             }
@@ -93,7 +91,7 @@ class DataManager:
         return data.data[0][:10].replace("-", "")
 
     @staticmethod
-    def __parse_data(data, use_increments=False):
+    def __parse_data(data, denominazione, use_increments=False):
         giorni = np.array(list(xi[:10] for xi in data['data']))
         contagiati = data['totale_casi']
         deceduti = data['deceduti']
@@ -108,6 +106,7 @@ class DataManager:
             None, None, None, None)
 
         return {
+            "denominazione": denominazione,
             "giorni": giorni,
             "totale_casi": contagiati,
             "deceduti": deceduti,
@@ -194,9 +193,26 @@ class Utils:
 
 
 class AnalisiDati:
-    utils_manager = Utils()
+    __utils_manager = Utils()
+    __time_str = ''
+    __storeGraph = False
+    __showGraph = False
 
-    def analisi_nazione(self, file_nazionale, output_base, show=None, store=None):
+    def __init__(self, time_str, show=False, store=True):
+        self.__time_str = time_str
+        self.__showGraph = show
+        self.__storeGraph = store
+
+    def tabelle(self, file_nazionale_latest, file_regionale_latest, output_base, show=None, store=None):
+        data_nazionale_latest = DataManager.nazionale_data(file_nazionale_latest, use_increments=True)
+        data_regionale_latest, _ = DataManager.regioni_data(file_regionale_latest, use_increments=True)
+        self.__table_rapporto_tamponi_contagi(data_nazionale_latest=data_nazionale_latest,
+                                              data_regionale_latest=data_regionale_latest,
+                                              output_base=output_base,
+                                              show=show,
+                                              store=store)
+
+    def analisi_nazione(self, file_nazionale, output_base, latest, show=None, store=None):
         print("Generazione grafici nazionali")
         data = DataManager.nazionale_data(file_nazionale, use_increments=True)
 
@@ -206,25 +222,25 @@ class AnalisiDati:
         self.__nazionale_increment(data, output_base=output_base, use_percentage=True, show=show, store=store)
         self.__nazionale_dettaglio(data, output_base=output_base, use_percentage=False, show=show, store=store)
 
-    def analisi_regioni(self, regioni, output_base, head_region=0, must_region=None, use_percentage=True, show=None,
+    def analisi_regioni(self, file_regioni, output_base, latest, head_region=0, must_region=None, use_percentage=True, show=None,
                         store=None):
         print("Generazione grafici regionali")
-        must_region = must_region if must_region is not None else [15]
-        data = DataManager.regioni_data(regioni, head_region=head_region, must_region=must_region, use_increments=True)
+        must_region = must_region if must_region is not None else [15, 16]
+        data, codici_regione = DataManager.regioni_data(file_regioni, head_region=head_region, must_region=must_region, use_increments=True)
 
-        self.__regioni_linear(data, output_base_reg=output_base, head_region=head_region, must_region=must_region,
-                              show=show, store=store)
-        self.__regioni_log(data, output_base_reg=output_base, head_region=head_region, must_region=must_region,
-                           show=show, store=store)
+        self.__regioni_linear(data, output_base_reg=output_base, codici_regione=codici_regione, head_region=5,
+                              must_region=must_region, show=show, store=store)
+        self.__regioni_log(data, output_base_reg=output_base, codici_regione=codici_regione, head_region=5,
+                           must_region=must_region, show=show, store=store)
         self.__regioni_increment(data, output_base_reg=output_base, use_percentage=True, show=show, store=store)
         self.__regioni_increment(data, output_base_reg=output_base, use_percentage=False, show=show, store=store)
         self.__regioni_dettaglio(data, output_base=output_base, use_percentage=False, show=show, store=store)
 
-    def analisi_province(self, file_province, output_base, generate_bars=None, show=None, store=None):
+    def analisi_province(self, file_province, file_regioni, output_base, latest, generate_bars=None, show=None, store=None):
         generate_bars = generate_bars if generate_bars is not None else [3, 15]
 
         print("Generazione grafici province")
-        [codici_regione, data_reg] = DataManager.get_all_region(regioni)
+        [codici_regione, data_reg] = DataManager.get_all_region(file_regioni)
         for reg in codici_regione:
             data = DataManager.province_data(file_province, target_region=reg, use_increments=True)
             idx = data_reg['codice_regione'] == reg
@@ -238,8 +254,8 @@ class AnalisiDati:
 
     def __nazionale_plot(self, data, output_base, type, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         plt.close('all')
         figure = plt.figure(figsize=(16, 10))
@@ -279,7 +295,7 @@ class AnalisiDati:
         plt.yscale(type)
         plt.legend()
         plt.grid(b=True, which='major', axis='x')
-        base_filename = self.utils_manager.clean_filename(f'Italia_{type}_{timestr}')
+        base_filename = self.__utils_manager.clean_filename(f'Italia_{type}_{self.__time_str}')
         if store:
             plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
             plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
@@ -297,8 +313,8 @@ class AnalisiDati:
 
     def __nazionale_increment(self, data, output_base, use_percentage=True, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         perc_text = " percentuale" if use_percentage else ""
         print(f'-> Generazione grafico a barre{perc_text} incrementi')
@@ -318,7 +334,7 @@ class AnalisiDati:
             y_off = 0.01 if use_percentage else 0.1
             plt.text(x=y_pos[i] - 0.25, y=incrementi[i] + y_off, s=label, size=6)
 
-        base_filename = self.utils_manager.clean_filename(f'Italia_incrementi{perc_text}_{timestr}')
+        base_filename = self.__utils_manager.clean_filename(f'Italia_incrementi{perc_text}_{self.__time_str}')
         if store:
             plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
             plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
@@ -331,16 +347,19 @@ class AnalisiDati:
         self.__plot_increment_details(data, denominazione="Italia", output_base=output_base,
                                       use_percentage=use_percentage, show=show, store=store)
 
-    def __regioni_plot(self, data, output_base, type, head_region, must_region, show=None, store=None):
+    def __regioni_plot(self, data, output_base, type, head_region, must_region, codici_regione, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         plt.close('all')
         figure = plt.figure(figsize=(16, 10))
 
+        selection = np.unique(np.concatenate((codici_regione[:head_region], must_region)))
+        data_selected = {x: data.get(x) for x in selection}
+
         denominazioni = []
-        for reg, values in data.items():
+        for reg, values in data_selected.items():
             X = values['giorni']
             Contagiati = values['totale_casi']
             denominazione = values['denominazione']
@@ -369,7 +388,7 @@ class AnalisiDati:
         plt.yscale(type)
         plt.legend()
         plt.grid(b=True, which='major', axis='x')
-        base_filename = self.utils_manager.clean_filename(f'Riassunto_regionale_{type}_{timestr}')
+        base_filename = self.__utils_manager.clean_filename(f'Riassunto_regionale_{type}_{self.__time_str}')
         if store:
             plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
             plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
@@ -377,22 +396,22 @@ class AnalisiDati:
             plt.show()
         plt.close(figure)
 
-    def __regioni_log(self, data, output_base_reg, head_region=5, must_region=None, show=None, store=None):
+    def __regioni_log(self, data, output_base_reg, codici_regione, head_region=5, must_region=None, show=None, store=None):
         print("-> Generazione grafico evoluzione logaritmica")
         must_region = must_region if must_region is not None else [15]
-        self.__regioni_plot(data, output_base=output_base_reg, type="log", head_region=head_region,
+        self.__regioni_plot(data, output_base=output_base_reg, type="log", codici_regione=codici_regione, head_region=head_region,
                             must_region=must_region, show=show, store=store)
 
-    def __regioni_linear(self, data, output_base_reg, head_region=5, must_region=None, show=None, store=None):
+    def __regioni_linear(self, data, output_base_reg, codici_regione, head_region=5, must_region=None, show=None, store=None):
         print("-> Generazione grafico evoluzione lineare")
         must_region = must_region if must_region is not None else [15]
-        self.__regioni_plot(data, output_base=output_base_reg, type="linear", head_region=head_region,
+        self.__regioni_plot(data, output_base=output_base_reg, type="linear", codici_regione=codici_regione, head_region=head_region,
                             must_region=must_region, show=show, store=store)
 
     def __regioni_increment(self, data, output_base_reg, use_percentage=True, show=None, store=None):
         Path(output_base_reg).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         perc_text = " percentuale" if use_percentage else ""
 
@@ -415,7 +434,7 @@ class AnalisiDati:
                 y_off = 0.01 if use_percentage else 0.1
                 plt.text(x=y_pos[i] - 0.25, y=incrementi[i] + y_off, s=label, size=6)
 
-            base_filename = self.utils_manager.clean_filename(f'{denominazione}_incrementi{perc_text}_{timestr}')
+            base_filename = self.__utils_manager.clean_filename(f'{denominazione}_incrementi{perc_text}_{self.__time_str}')
             if store:
                 plt.savefig(f'{output_base_reg}{base_filename}.png', bbox_inches='tight')
                 plt.savefig(f'{output_base_reg}{base_filename}.pdf', bbox_inches='tight')
@@ -425,8 +444,8 @@ class AnalisiDati:
 
     def __regioni_increment_details(self, data, output_base, use_percentage=True, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         perc_text = " percentuale" if use_percentage else ""
 
@@ -456,7 +475,7 @@ class AnalisiDati:
                 plt.text(x=y_pos1[i] - 0.25, y=incrementi[i] + y_off, s=label1, size=6)
                 plt.text(x=y_pos2[i] - 0.25, y=tamponi[i] + y_off, s=label2, size=6)
 
-            base_filename = self.utils_manager.clean_filename(f'{denominazione}_dettagli{perc_text}_{timestr}')
+            base_filename = self.__utils_manager.clean_filename(f'{denominazione}_dettagli{perc_text}_{self.__time_str}')
             if store:
                 plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
                 plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
@@ -466,8 +485,8 @@ class AnalisiDati:
 
     def __regioni_dettaglio(self, data, output_base, use_percentage=True, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         for reg, values in data.items():
             denominazione = values['denominazione']
@@ -476,8 +495,8 @@ class AnalisiDati:
 
     def __regione_plot_details(self, data, output_base, type, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         for reg, values in data.items():
             denominazione = values['denominazione']
@@ -521,7 +540,7 @@ class AnalisiDati:
             plt.yscale(type)
             plt.legend()
             plt.grid(b=True, which='major', axis='x')
-            base_filename = self.utils_manager.clean_filename(f'{denominazione}_detail_{type}_{timestr}')
+            base_filename = self.__utils_manager.clean_filename(f'{denominazione}_detail_{type}_{self.__time_str}')
             if store:
                 plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
                 plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
@@ -531,8 +550,8 @@ class AnalisiDati:
 
     def __plot_increment_details(self, data, denominazione, output_base, use_percentage=True, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         perc_text = " percentuale" if use_percentage else ""
 
@@ -546,7 +565,7 @@ class AnalisiDati:
         columns = giorni.tolist()
         rows = ["Contagi", "Tamponi", "Percentuale"]
 
-        colors = plt.cm.BuPu(np.linspace(0, 1, len(rows)))
+        colors = plt.cm.rainbow(np.linspace(0, 1, len(rows)))
 
         index = np.arange(len(columns))
         bar_width = 0.8
@@ -573,7 +592,7 @@ class AnalisiDati:
             plt.text(x=index[i] - x_off, y=incrementi[i] + y_off1, s=label1, size=6, zorder=20)
             plt.text(x=index[i] - x_off, y=tamponi[i] + y_off2, s=label2, size=6, zorder=20)
 
-        base_filename = self.utils_manager.clean_filename(f'{denominazione}_dettagli{perc_text}_{timestr}')
+        base_filename = self.__utils_manager.clean_filename(f'{denominazione}_dettagli{perc_text}_{self.__time_str}')
         if store:
             plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
             plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
@@ -584,8 +603,8 @@ class AnalisiDati:
 
     def __province_plot(self, data, output_base, type, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         plt.close('all')
         figure = plt.figure(figsize=(16, 10))
@@ -607,7 +626,7 @@ class AnalisiDati:
         plt.yscale(type)
         plt.legend()
         plt.grid(b=True, which='major', axis='x')
-        base_filename = self.utils_manager.clean_filename(f'province_{regione}_{type}_{timestr}')
+        base_filename = self.__utils_manager.clean_filename(f'province_{regione}_{type}_{self.__time_str}')
         if store:
             plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
             plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
@@ -623,8 +642,8 @@ class AnalisiDati:
 
     def __province_increment(self, data, output_base, use_percentage=True, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
-        store = storeGraph if store is None else store
-        show = showGraph if show is None else store
+        store = self.__storeGraph if store is None else store
+        show = self.__showGraph if show is None else show
 
         plt.close('all')
 
@@ -649,8 +668,8 @@ class AnalisiDati:
                 y_off = 0.01 if use_percentage else 0.1
                 plt.text(x=y_pos[i] - 0.25, y=incrementi[i] + y_off, s=label, size=6)
 
-            base_filename = self.utils_manager.clean_filename(
-                f'{regione}_{denominazione}_incrementi{perc_text}_{timestr}')
+            base_filename = self.__utils_manager.clean_filename(
+                f'{regione}_{denominazione}_incrementi{perc_text}_{self.__time_str}')
             if store:
                 plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
                 plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
@@ -658,32 +677,85 @@ class AnalisiDati:
                 plt.show()
             plt.close(figure)
 
+    def __table_rapporto_tamponi_contagi(self, data_nazionale_latest, data_regionale_latest, output_base, show=None, store=None):
+        columns = ('Tamponi','Contagi', 'delta contagi', '% su tamponi')
+        rows = [data_nazionale_latest['denominazione'], ] + [data_regionale_latest[x]['denominazione'] for x in
+                                                             data_regionale_latest]
+        # print(rows)
+        n_rows = [0, ] + [x for x in data_regionale_latest]
+        cell_text = []
+
+        for x in n_rows:
+            if x == 0:
+                cell_text.append(self.__table_rapporto_tamponi_contagi_row(data_nazionale_latest))
+            else:
+                cell_text.append(self.__table_rapporto_tamponi_contagi_row(data_regionale_latest[x]))
+        # print(cell_text)
+        self.__plot_table(cell_text=cell_text, columns=columns, rows=rows, output_base=output_base,
+                          table_title="Riepilogo_TamponiContagi", show=show, store=store)
+
+    def __table_rapporto_tamponi_contagi_row (self, data):
+        incrementi_tamponi = "{:+d}".format(abs(data['incrementi_tamponi'].array[-1]))
+        incrementi = "{:+d}".format(data['incrementi'].array[-1])
+        incrementi_percentuali = "{0:+.1%}".format(data['incrementi_percentuali'].array[-1])
+        rapporto = "{0:+.1%}".format(data['incrementi'].array[-1] / abs(data['incrementi_tamponi'].array[-1])) if \
+        data['incrementi_tamponi'].array[-1] != 0 else "ND/NP"
+        row = [incrementi_tamponi, incrementi, incrementi_percentuali, rapporto]
+        return row
+
+
+    def __plot_table(self, cell_text, columns, rows, output_base, table_title, show=None, store=None):
+        plt.close('all')
+        plt.table(cellText=cell_text,
+                              rowLabels=rows,
+                              colLabels=columns,
+                              loc='center')
+        base_filename = self.__utils_manager.clean_filename(
+            f'{table_title}_table_{self.__time_str}')
+        plt.xticks([])
+        plt.yticks([])
+        if store:
+            plt.savefig(f'{output_base}{base_filename}.png', bbox_inches='tight')
+            plt.savefig(f'{output_base}{base_filename}.pdf', bbox_inches='tight')
+        if show:
+            plt.show()
+
 
 class MyProgressPrinter(RemoteProgress):
     def update(self, op_code, cur_count, max_count=None, message=''):
         print(op_code, cur_count, max_count, cur_count / (max_count or 100.0), message or "NO MESSAGE")
 
 
-if __name__ == '__main__':
+def main_func():
     repo_path = '/Users/bruand/Documents Local/analisi/COVID-19'
     updated = RepoManager.update_repo(repo_path)
     if force_graph_generation or updated:
         print(f'Repository aggiornato. Rigenerazione grafici in corso')
-        latest = f'{repo_path}/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-latest.csv'
+        nazionale_latest = f'{repo_path}/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-latest.csv'
         nazionale = f'{repo_path}/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv'
         regioni = f'{repo_path}/dati-regioni/dpc-covid19-ita-regioni.csv'
         province = f'{repo_path}/dati-province/dpc-covid19-ita-province.csv'
+        regioni_latest = f'{repo_path}/dati-regioni/dpc-covid19-ita-regioni-latest.csv'
+        province_latest = f'{repo_path}/dati-province/dpc-covid19-ita-province-latest.csv'
 
-        timestr = DataManager.get_last_update(latest)
-        output_base_path = f'output/{timestr}/'
+        time_str = DataManager.get_last_update(nazionale_latest)
+        output_base_path = f'output/{time_str}/'
         output_base_path_reg = f'{output_base_path}regionale/'
         output_base_path_prov = f'{output_base_path}provinciale/'
-        storeGraph = True
-        showGraph = False
-        analysis = AnalisiDati()
-        analysis.analisi_nazione(nazionale, output_base=output_base_path)
-        analysis.analisi_regioni(regioni, output_base=output_base_path_reg, head_region=0, must_region=None,
-                                 use_percentage=True)
-        analysis.analisi_province(province, output_base=output_base_path_prov, generate_bars=[3, 15])
+        analysis = AnalisiDati(time_str=time_str, show=False, store=True)
+        analysis.analisi_nazione(file_nazionale=nazionale, output_base=output_base_path, latest=nazionale_latest)
+        analysis.tabelle(file_nazionale_latest=nazionale, file_regionale_latest=regioni,
+                         output_base=output_base_path, show=False, store=True)
+        analysis.analisi_regioni(file_regioni=regioni, output_base=output_base_path_reg, head_region=0,
+                                 must_region=None,
+                                 use_percentage=True,
+                                 latest=regioni_latest)
+        analysis.analisi_province(file_province=province, output_base=output_base_path_prov, generate_bars=[3, 15],
+                                  latest=province_latest,
+                                  file_regioni=regioni_latest)
     else:
         print('Aggiornamento dei grafici non necessario')
+
+
+if __name__ == '__main__':
+    main_func()
