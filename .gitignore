@@ -85,3 +85,10 @@ lastrev
 output/.DS_Store
 output
 table_demo.py
+/AnalisiCovid19Italia.egg-info/
+/dist/
+/build/
+/AnalisiCovid19Italia.egg-info/*
+/dist/*
+/build/*
+/output/
