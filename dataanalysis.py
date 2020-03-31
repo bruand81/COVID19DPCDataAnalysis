@@ -4,6 +4,7 @@ from pathlib import Path
 from datamanager import DataManager
 from utils import Utils
 
+
 class AnalisiDati:
     __utils_manager = Utils()
     __time_str = ''
@@ -12,11 +13,15 @@ class AnalisiDati:
     __data_nazionale = None
     __data_regionale = None
     __codici_regione = None
+    __data_provinciale = None
 
-    def __init__(self, time_str, show=False, store=True):
+    def __init__(self, time_str, file_nazionale, file_regioni, file_province, show=False, store=True):
         self.__time_str = time_str
         self.__showGraph = show
         self.__storeGraph = store
+        self.__data_nazionale = DataManager.nazionale_data(file_nazionale)
+        self.__data_regionale, self.__codici_regione = DataManager.regioni_data(file_regioni)
+        self.__data_provinciale = DataManager.province_data2(file_province)
 
     def tabelle(self, file_nazionale, file_regioni, output_base, show=None, store=None):
         print("Generazione tabelle riepilogative")
@@ -64,23 +69,23 @@ class AnalisiDati:
         self.__regioni_increment(self.__data_regionale, output_base_reg=output_base, use_percentage=False, show=show, store=store)
         self.__regioni_dettaglio(self.__data_regionale, output_base=output_base, use_percentage=False, show=show, store=store)
 
-    def analisi_province(self, file_province, file_regioni, output_base, generate_bars=None, show=None,
-                         store=None):
+    def analisi_province(self, file_province, file_regioni, output_base, generate_bars=None, show=None, store=None):
         print("Generazione grafici province")
         Path(output_base).mkdir(parents=True, exist_ok=True)
 
-        generate_bars = generate_bars if generate_bars is not None else [3, 15]
+        if self.__data_provinciale is None:
+            self.__data_provinciale = DataManager.province_data2(file_province)
 
+        generate_bars = generate_bars if generate_bars is not None else self.__codici_regione
         for reg in self.__codici_regione:
-            data = DataManager.province_data(file_province, target_region=reg, use_increments=True)
-            idx = self.__data_regionale['codice_regione'] == reg
-            denominazione = ",".join(self.__data_regionale[idx].denominazione_regione.unique())
+            denominazione = ",".join(
+                self.__data_regionale[self.__data_regionale['codice_regione'] == reg].denominazione_regione.unique())
             print(f'-> Generazione grafici provinciali per regione {denominazione}')
-            self.__province_linear(data, output_base=output_base, show=show, store=store)
-            self.__province_log(data, output_base=output_base, show=show, store=store)
+            values = self.__data_provinciale[self.__data_provinciale['codice_regione']==reg]
+            self.__province_linear(values, output_base=output_base, show=show, store=store)
+            self.__province_log(values, output_base=output_base, show=show, store=store)
             if reg in generate_bars:
-                self.__province_increment(data, output_base=output_base, show=show, store=store)
-                self.__province_increment(data, output_base=output_base, show=show, store=store)
+                self.__province_increment(values, output_base=output_base, show=show, store=store)
 
     def __nazionale_plot(self, data, output_base, type, show=None, store=None):
         Path(output_base).mkdir(parents=True, exist_ok=True)
@@ -458,14 +463,16 @@ class AnalisiDati:
         plt.close('all')
         figure = plt.figure(figsize=(16, 10))
 
-        regione = ""
+        regione = ", ".join(data.denominazione_regione.unique())
 
-        for prov, values in data.items():
-            X = values['giorni']
+        idx = data.sort_values(by="totale_casi", ascending=False).codice_provincia.unique()
+
+        for prov in idx:
+            values = data[data['codice_provincia'] == prov]
+            denominazione = ", ".join(values.denominazione.unique())
+            giorni = values['giorni']
             contagiati = values['totale_casi']
-            denominazione = values['denominazione']
-            regione = values['regione']
-            plt.plot(X, contagiati, '-o', label=denominazione + " Totale")
+            plt.plot(giorni, contagiati, '-o', label=denominazione + " Totale")
 
         analysis_desc = ""
         if type == "log":
@@ -496,9 +503,13 @@ class AnalisiDati:
 
         plt.close('all')
 
-        for prov, values in data.items():
-            denominazione = values['denominazione']
-            regione = values['regione']
+        regione = ", ".join(data.denominazione_regione.unique())
+
+        idx = data.sort_values(by="totale_casi", ascending=False).codice_provincia.unique()
+
+        for prov in idx:
+            values = data[data['codice_provincia'] == prov]
+            denominazione = ", ".join(values.denominazione.unique())
             print(f'--> Generazione grafici a barre per {denominazione}')
             plt.close('all')
             figure = plt.figure(figsize=(16, 10))

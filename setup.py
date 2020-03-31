@@ -29,5 +29,6 @@ setup(
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
-    description='Analisi dei dati giornalieri forniti dal Dipartimento di Protezione Civile Italiana in merito all\'epidemia di Covid 19'
+    description='Analisi dei dati giornalieri forniti dal Dipartimento di Protezione Civile Italiana in merito all\'epidemia di Covid 19',
+    install_requires=['pandas', 'numpy', 'git']
 )

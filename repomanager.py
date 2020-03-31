@@ -2,6 +2,7 @@ from git import Repo
 from git import RemoteProgress
 from pathlib import Path
 
+
 class RepoManager:
     @staticmethod
     def update_repo(repository_path, base_output_path='.'):

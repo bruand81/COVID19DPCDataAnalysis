@@ -1,6 +1,7 @@
 import unicodedata
 import string
 
+
 class Utils:
     __valid_filename_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
     __char_limit = 255

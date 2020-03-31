@@ -2,7 +2,7 @@ from datamanager import DataManager
 from repomanager import RepoManager
 from dataanalysis import AnalisiDati
 
-force_graph_generation = True
+force_graph_generation = False
 
 def main_func():
     repo_path = '/Users/bruand/Documents Local/analisi/COVID-19'
@@ -19,7 +19,7 @@ def main_func():
         output_base_path = f'output/{time_str}/'
         output_base_path_reg = f'{output_base_path}regionale/'
         output_base_path_prov = f'{output_base_path}provinciale/'
-        analysis = AnalisiDati(time_str=time_str, show=False, store=True)
+        analysis = AnalisiDati(time_str=time_str, file_nazionale=nazionale, file_regioni=regioni, file_province=province, show=False, store=True)
         analysis.analisi_nazione(file_nazionale=nazionale, output_base=output_base_path, latest=nazionale_latest)
         analysis.tabelle(file_nazionale=nazionale, file_regioni=regioni,
                          output_base=output_base_path, show=False, store=True)
