@@ -27,7 +27,7 @@ def main_func():
         output_base_path_reg = f'{output_base_path}regionale/'
         output_base_path_prov = f'{output_base_path}provinciale/'
         analysis = AnalisiDati(time_str=time_str, file_nazionale=nazionale, file_regioni=regioni,
-                               file_province=province, show=False, store=True)
+                               file_province=province, show=False, store=True, color_map="brg")
         if gen_nazionale:
             analysis.analisi_nazione(file_nazionale=nazionale, output_base=output_base_path, show=show, store=store)
 

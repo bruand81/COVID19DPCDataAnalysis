@@ -16,13 +16,14 @@ class AnalisiDati:
     __data_provinciale = None
     __color_map = "gist_rainbow"
 
-    def __init__(self, time_str, file_nazionale, file_regioni, file_province, show=False, store=True):
+    def __init__(self, time_str, file_nazionale, file_regioni, file_province, show=False, store=True, color_map=None):
         self.__time_str = time_str
         self.__showGraph = show
         self.__storeGraph = store
         self.__data_nazionale = DataManager.nazionale_data(file_nazionale)
         self.__data_regionale, self.__codici_regione = DataManager.regioni_data(file_regioni)
         self.__data_provinciale = DataManager.province_data(file_province)
+        self.__color_map = self.__color_map if color_map is None else color_map
 
     def tabelle(self, file_nazionale, file_regioni, output_base, show=None, store=None):
         print("Generazione tabelle riepilogative")
