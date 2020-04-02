@@ -32,7 +32,7 @@ class DataManager:
         return data_reg, codici_regione
 
     @staticmethod
-    def province_data2(file_province):
+    def province_data(file_province):
         data_prov = pd.read_csv(file_province)
         data_prov['denominazione'] = data_prov['denominazione_provincia']
         data_prov['giorni'] = data_prov['data'].str.slice(stop=10)
@@ -52,41 +52,6 @@ class DataManager:
                 prev_day_contagi = row['totale_casi']
         pd.reset_option('mode.chained_assignment')
         return data_prov
-
-    @staticmethod
-    def province_data(file_province, target_region=15, use_increments=False):
-        data_prov = pd.read_csv(file_province)
-        data_prov_in_reg = data_prov[data_prov.codice_regione.eq(target_region)]
-
-        idx = data_prov_in_reg.groupby(['codice_provincia'])['totale_casi'].transform(max) == data_prov_in_reg[
-            'totale_casi']
-
-        codici_province = data_prov_in_reg[idx].sort_values(by="totale_casi", ascending=False)[
-            "codice_provincia"].to_numpy()
-        return_data = {}
-
-        for prov in codici_province:
-            data = data_prov_in_reg[data_prov_in_reg["codice_provincia"] == prov]
-            giorni = np.array(list(xi[:10] for xi in data['data']))
-            contagiati = data['totale_casi']
-
-            template = contagiati.copy()
-            template.values[:] = 0
-
-            (increments, increments_percentage, _, _) = DataManager.__compute_increments(
-                contagiati, template=template) if use_increments else (
-                template.astype("int64", copy=True), template.astype("float64", copy=True), None, None)
-
-            return_data[prov] = {
-                "regione": data.denominazione_regione.unique()[0],
-                "denominazione": data.denominazione_provincia.unique()[0],
-                "giorni": giorni,
-                "totale_casi": contagiati,
-                "incrementi": increments,
-                "incrementi_percentuali": increments_percentage
-            }
-
-        return return_data
 
     @staticmethod
     def get_all_region(file_regioni):

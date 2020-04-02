@@ -30,5 +30,5 @@ setup(
         'Programming Language :: Python :: 3.8',
     ],
     description='Analisi dei dati giornalieri forniti dal Dipartimento di Protezione Civile Italiana in merito all\'epidemia di Covid 19',
-    install_requires=['pandas', 'numpy', 'git']
+    install_requires=['pandas', 'numpy', 'git', 'scikit-learn', 'matplotlib']
 )
