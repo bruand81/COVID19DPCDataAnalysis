@@ -26,7 +26,7 @@ class AnalisiDati:
         self.__color_map = self.__color_map if color_map is None else color_map
 
     def tabelle(self, file_nazionale, file_regioni, output_base, show=None, store=None):
-        print("Generazione tabelle riepilogative")
+        print(f'Generazione tabelle riepilogative al {self.__time_str}')
 
         if self.__data_nazionale is None:
             self.__data_nazionale = DataManager.nazionale_data(file_nazionale)
@@ -39,7 +39,7 @@ class AnalisiDati:
                                               store=store)
 
     def analisi_nazione(self, file_nazionale, output_base, show=None, store=None):
-        print("Generazione grafici nazionali")
+        print(f'Generazione grafici nazionali al {self.__time_str}')
 
         if self.__data_nazionale is None:
             self.__data_nazionale = DataManager.nazionale_data(file_nazionale)
@@ -56,7 +56,7 @@ class AnalisiDati:
     def analisi_regioni(self, file_regioni, output_base, head_region=5, must_region=None,
                         show=None,
                         store=None):
-        print("Generazione grafici regionali")
+        print(f'Generazione grafici regionali al {self.__time_str}')
 
         must_region = must_region if must_region is not None else []
         if self.__data_regionale is None:
@@ -76,7 +76,7 @@ class AnalisiDati:
                                  store=store)
 
     def analisi_province(self, file_province, file_regioni, output_base, generate_bars=None, show=None, store=None):
-        print("Generazione grafici province")
+        print(f'Generazione grafici province al {self.__time_str}')
 
         if self.__data_regionale is None:
             self.__data_regionale, self.__codici_regione = DataManager.regioni_data(file_regioni)
@@ -88,7 +88,7 @@ class AnalisiDati:
         for reg in self.__codici_regione:
             denominazione = ",".join(
                 self.__data_regionale[self.__data_regionale['codice_regione'] == reg].denominazione_regione.unique())
-            print(f'-> Generazione grafici provinciali per regione {denominazione}')
+            print(f'-> Generazione grafici provinciali per regione {denominazione} al {self.__time_str}')
             values = self.__data_provinciale[self.__data_provinciale['codice_regione'] == reg]
             self.__province_linear(values, output_base=output_base, show=show, store=store)
             self.__province_log(values, output_base=output_base, show=show, store=store)
@@ -133,7 +133,7 @@ class AnalisiDati:
         analysis_desc = " logaritmica" if graph_type == "log" else ""
 
         plt.title(
-            f'Analisi{analysis_desc} evoluzione COVID19 in Italia')
+            f'Analisi{analysis_desc} evoluzione COVID19 in Italia al {self.__time_str}')
         plt.xticks(rotation=90)
         plt.yscale(graph_type)
         plt.legend()
@@ -203,7 +203,7 @@ class AnalisiDati:
         else:
             region_text = f'{head_region} più colpite'
 
-        plt.title(f'Analisi{analysis_desc} evoluzione COVID19 nelle {region_text} d\'Italia{tail_text}')
+        plt.title(f'Analisi{analysis_desc} evoluzione COVID19 nelle {region_text} d\'Italia{tail_text} al {self.__time_str}')
         plt.xticks(rotation=90)
         plt.yscale(graph_type)
         plt.legend()
@@ -228,19 +228,18 @@ class AnalisiDati:
                             head_region=head_region,
                             must_region=must_region, show=show, store=store)
 
-    @staticmethod
-    def __plot_increment(data, denominazione, use_percentage=True):
+    def __plot_increment(self, data, denominazione, use_percentage=True):
         perc_text = " percentuale" if use_percentage else ""
         incrementi = data['incrementi_percentuali'] if use_percentage else data['incrementi']
         y_pos = np.arange(len(data['giorni']))
-        colors = plt.get_cmap(AnalisiDati.__color_map)(np.linspace(0, 1, 2))
+        colors = plt.get_cmap(self.__color_map)(np.linspace(0, 1, 2))
 
         plt.bar(y_pos, incrementi, align='center', alpha=0.5, color=colors[0])
         plt.xticks(y_pos, data['giorni'])
         plt.ylabel('Incremento casi giornaliero')
         plt.xlabel('Giorni')
         plt.xticks(rotation=90)
-        plt.title(f'Incremento{perc_text} contagi COVID19 in {denominazione}')
+        plt.title(f'Incremento{perc_text} contagi COVID19 in {denominazione} al {self.__time_str}')
 
         incrementi_array = incrementi.to_numpy()
         for i in range(len(y_pos)):
@@ -297,7 +296,7 @@ class AnalisiDati:
             plt.ylabel('Incremento casi giornaliero')
             plt.xlabel('Giorni')
             plt.xticks(rotation=90)
-            plt.title(f'Incremento{perc_text} tamponi e contagiati COVID19 in {denominazione}')
+            plt.title(f'Incremento{perc_text} tamponi e contagiati COVID19 in {denominazione} al {self.__time_str}')
             plt.legend()
 
             for i in range(len(y_pos1)):
@@ -366,7 +365,7 @@ class AnalisiDati:
                 analysis_desc = " logaritmica"
 
             plt.title(
-                f'Analisi{analysis_desc} evoluzione COVID19 in Italia')
+                f'Analisi{analysis_desc} evoluzione COVID19 in Italia al {self.__time_str}')
             plt.xticks(rotation=90)
             plt.yscale(type)
             plt.legend()
@@ -403,7 +402,7 @@ class AnalisiDati:
         cell_text.append([format_str.format(x) for x in tamponi])
         cell_text.append(["{:+.1%}".format(x) for x in percentali])
 
-        plt.title(f'Incremento{perc_text} tamponi e contagiati COVID19 in {denominazione}')
+        plt.title(f'Incremento{perc_text} tamponi e contagiati COVID19 in {denominazione} al {self.__time_str}')
 
         plt.xticks(index, columns, rotation=90)
         plt.legend()
@@ -444,7 +443,7 @@ class AnalisiDati:
         analysis_desc = ""
         if type == "log":
             analysis_desc = " logaritmica"
-        plt.title(f'Analisi{analysis_desc} evoluzione COVID19 nelle province della {regione}')
+        plt.title(f'Analisi{analysis_desc} evoluzione COVID19 nelle province della {regione} al {self.__time_str}')
         plt.xticks(rotation=90)
         plt.yscale(type)
         plt.legend()
@@ -517,7 +516,7 @@ class AnalisiDati:
                   colLabels=columns,
                   rowColours=colors,
                   loc='center')
-        plt.title("Tabella andamento giornaliero")
+        plt.title(f'Tabella riepilogo tamponi/contagi COVID 19 in Italia al {self.__time_str}')
         base_filename = self.__utils_manager.clean_filename(
             f'{table_title}_table_{self.__time_str}')
         plt.xticks([])
