@@ -92,3 +92,4 @@ table_demo.py
 /dist/*
 /build/*
 /output/
+.mapbox_token

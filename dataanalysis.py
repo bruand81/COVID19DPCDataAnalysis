@@ -16,14 +16,47 @@ class AnalisiDati:
     __data_provinciale = None
     __color_map = "gist_rainbow"
 
-    def __init__(self, time_str, file_nazionale, file_regioni, file_province, show=False, store=True, color_map=None):
-        self.__time_str = time_str
+    def __init__(self, file_nazionale, file_regioni, file_province, show=False, store=True, color_map=None, time_str=None):
         self.__showGraph = show
         self.__storeGraph = store
         self.__data_nazionale = DataManager.nazionale_data(file_nazionale)
+        max_data = self.__data_nazionale.data.max()
+        self.__time_str = time_str if time_str is not None else max_data[:10].replace("-", "")
         self.__data_regionale, self.__codici_regione = DataManager.regioni_data(file_regioni)
         self.__data_provinciale = DataManager.province_data(file_province)
         self.__color_map = self.__color_map if color_map is None else color_map
+
+    @property
+    def data_nazionale(self):
+        return self.__data_nazionale
+
+    @property
+    def data_nazionale_latest(self):
+        return self.data_latest(self.__data_nazionale)
+
+    @property
+    def data_regionale(self):
+        return self.__data_regionale
+
+    @property
+    def data_regionale_latest(self):
+        return self.data_latest(self.__data_regionale)
+
+    @property
+    def data_provinciale(self):
+        return self.__data_provinciale
+
+    @property
+    def data_provinciale_latest(self):
+        return self.data_latest(self.__data_provinciale)
+
+    @property
+    def last_update(self):
+        return self.__data_nazionale.data.max()
+
+    def data_latest(self, data):
+        max_data = self.__data_nazionale.data.max()
+        return data[data.data == max_data]
 
     def tabelle(self, file_nazionale, file_regioni, output_base, show=None, store=None):
         print(f'Generazione tabelle riepilogative al {self.__time_str}')
