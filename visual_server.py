@@ -1,4 +1,3 @@
-from repomanager import RepoManager
 from dataanalysis import AnalisiDati
 import plotly.graph_objects as go
 import plotly.express as px
@@ -7,7 +6,13 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table as dt
 import locale
-import pandas as pd
+from urllib.request import urlopen
+import json
+
+with urlopen(
+        'https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson') as response:
+    counties = json.load(response)
+
 locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
 
 hovermode = "x"
@@ -17,12 +22,16 @@ default_height = 800
 
 
 def generate_riepilogo_mappa(data: AnalisiDati):
-    df = data.data_regionale_latest
-    # mappa_nazionale = px.scatter_mapbox(df, lat="lat", lon="long", color="denominazione", size="totale_casi",
-    #                                     color_continuous_scale=px.colors.cyclical.IceFire)
+    df = data.data_regionale_latest.sort_values(by="totale_casi", ascending=False)
 
     mappa_nazionale = px.scatter_mapbox(df, lat="lat", lon="long", color="denominazione", size="totale_casi",
-                                        color_discrete_sequence=px.colors.qualitative.Dark24)
+                                        # color_discrete_sequence=px.colors.qualitative.Dark24,
+                                        color_discrete_sequence=['red'],
+                                        labels={
+                                            'totale_casi': 'Totale casi',
+                                            'deceduti': 'Deceduti',
+                                            'terapia-intensiva': 'Terapia intensiva'
+                                        })
 
     mappa_nazionale.update_layout(
         title='Situazione nelle regioni',
@@ -38,18 +47,48 @@ def generate_riepilogo_mappa(data: AnalisiDati):
             ),
             pitch=0,
             zoom=5,
-            style='dark'
+            style='dark',
+            layers=[
+                dict(
+                    sourcetype='geojson',
+                    source='https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson',
+                    type='fill',
+                    below='traces',
+                    color='rgba(112,161,215,0.8)'
+                ),
+                dict(
+                    sourcetype='geojson',
+                    source='https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson',
+                    type='line',
+                    below='traces',
+                    color='white'
+                )
+            ],
         ),
         height=800,
         width=1500
     )
-
-    # mappa_nazionale.update_traces(
-    #     hovertemplate=None,
-    #     hoverinfo="all",
-    #     hovertext=df["totale_casi"]
-    # )
     return mappa_nazionale
+
+
+# def generate_riepilogo_mappa(data: AnalisiDati):
+#     df = data.data_regionale_latest
+#     mappa_nazionale = px.choropleth_mapbox(df, geojson=counties, locations='denominazione', color='totale_casi',
+#                                            color_continuous_scale="Viridis",
+#                                            range_color=(0, 26),
+#                                            mapbox_style="dark",
+#
+#                                            zoom=3, center={"lat": 42, "lon": 12},
+#                                            opacity=0.5,
+#                                            labels={'totale_casi': 'Totale casi'}
+#                                            )
+#     mappa_nazionale.update_layout(
+#         margin={"r": 0, "t": 0, "l": 0, "b": 0},
+#         mapbox=dict(
+#             accesstoken=mapbox_access_token,
+#         )
+#     )
+#     return mappa_nazionale
 
 
 def generate_riepilogo_nazionale(data: AnalisiDati):
@@ -130,8 +169,8 @@ def generate_riepilogo_bar(data: AnalisiDati, regione: int, use_percentage: bool
     tamponi_avg = y_tamponi.mean()
 
     fig = go.Figure(data=[
-        go.Bar(name='Nuovi contagi', x=df.giorni, y=[x if x < 4*contagi_avg else 1 for x in y_contagi]),
-        go.Bar(name='Nuovi tamponi', x=df.giorni, y=[x if x < 4*tamponi_avg else 1 for x in y_tamponi])
+        go.Bar(name='Nuovi contagi', x=df.giorni, y=[x if x < 4 * contagi_avg else 1 for x in y_contagi]),
+        go.Bar(name='Nuovi tamponi', x=df.giorni, y=[x if x < 4 * tamponi_avg else 1 for x in y_tamponi])
     ])
     # Change the bar mode
     fig.update_layout(
@@ -147,26 +186,26 @@ def generate_riepilogo_bar(data: AnalisiDati, regione: int, use_percentage: bool
     return fig
 
 
-def generate_table_from_data(data: AnalisiDati, regione: int,) -> dt.DataTable:
+def generate_table_from_data(data: AnalisiDati, regione: int, ) -> dt.DataTable:
     df = data.data_regionale[data.data_regionale.codice_regione == regione]
     data_table = dt.DataTable(
         id='rdt',
         columns=(
-                [
-                    {'id': 'denominazione', 'name': 'Denominazione'},
-                    {'id': 'giorni', 'name': 'Giorno'},
-                    {'id': 'totale_casi', 'name': 'Contagiati'},
-                    {'id': 'incrementi', 'name': 'Incremento contagi'},
-                    {'id': 'ricoverati_con_sintomi', 'name': 'Ricoverati'},
-                    {'id': 'terapia_intensiva', 'name': 'Terapia intensiva'},
-                    {'id': 'totale_ospedalizzati', 'name': 'Ospedalizzati'},
-                    {'id': 'isolamento_domiciliare', 'name': 'Isolamento'},
-                    {'id': 'nuovi_positivi', 'name': 'Nuovi positivi'},
-                    {'id': 'dimessi_guariti', 'name': 'Guariti'},
-                    {'id': 'deceduti', 'name': 'Deceduti'},
-                    {'id': 'tamponi', 'name': 'Tamponi'},
-                    {'id': 'incrementi_tamponi', 'name': 'Incremento tamponi'}
-                ]
+            [
+                {'id': 'denominazione', 'name': 'Denominazione'},
+                {'id': 'giorni', 'name': 'Giorno'},
+                {'id': 'totale_casi', 'name': 'Contagiati'},
+                {'id': 'incrementi', 'name': 'Incremento contagi'},
+                {'id': 'ricoverati_con_sintomi', 'name': 'Ricoverati'},
+                {'id': 'terapia_intensiva', 'name': 'Terapia intensiva'},
+                {'id': 'totale_ospedalizzati', 'name': 'Ospedalizzati'},
+                {'id': 'isolamento_domiciliare', 'name': 'Isolamento'},
+                {'id': 'nuovi_positivi', 'name': 'Nuovi positivi'},
+                {'id': 'dimessi_guariti', 'name': 'Guariti'},
+                {'id': 'deceduti', 'name': 'Deceduti'},
+                {'id': 'tamponi', 'name': 'Tamponi'},
+                {'id': 'incrementi_tamponi', 'name': 'Incremento tamponi'}
+            ]
         ),
         data=df[[
             'denominazione',
@@ -200,31 +239,31 @@ def generate_table_from_data(data: AnalisiDati, regione: int,) -> dt.DataTable:
             }
         ],
         style_cell_conditional=[
-           {'if': {'column_id': 'denominazione'},
-            'width': '80%',
-            'minWidth': '200px',
-            'textAlign': 'left',
-            }
+                                   {'if': {'column_id': 'denominazione'},
+                                    'width': '80%',
+                                    'minWidth': '200px',
+                                    'textAlign': 'left',
+                                    }
                                ] +
-        [
-            {'if': {'column_id': c},
-             'width': '10%',
-             'minWidth': '150px',
-             'textAlign': 'left'} for c in [
-                        'giorni',
-                        'totale_casi',
-                        'incrementi',
-                        'ricoverati_con_sintomi',
-                        'terapia_intensiva',
-                        'totale_ospedalizzati',
-                        'isolamento_domiciliare',
-                        'nuovi_positivi',
-                        'dimessi_guariti',
-                        'deceduti',
-                        'tamponi',
-                        'incrementi_tamponi'
-                    ]
-        ],
+                               [
+                                   {'if': {'column_id': c},
+                                    'width': '10%',
+                                    'minWidth': '150px',
+                                    'textAlign': 'left'} for c in [
+                                   'giorni',
+                                   'totale_casi',
+                                   'incrementi',
+                                   'ricoverati_con_sintomi',
+                                   'terapia_intensiva',
+                                   'totale_ospedalizzati',
+                                   'isolamento_domiciliare',
+                                   'nuovi_positivi',
+                                   'dimessi_guariti',
+                                   'deceduti',
+                                   'tamponi',
+                                   'incrementi_tamponi'
+                               ]
+                               ],
         style_header={
             'backgroundColor': 'rgb(230, 230, 230)',
             'fontWeight': 'bold'
@@ -232,63 +271,17 @@ def generate_table_from_data(data: AnalisiDati, regione: int,) -> dt.DataTable:
         fixed_columns={'headers': True, 'data': 2},
         fixed_rows={'headers': True, 'data': 0},
     )
-    # data_table = dt.DataTable(
-    #     # Initialise the rows
-    #     rows=df.to_dict('records'),
-    #     columns=(
-    #             [
-    #                 {'id': 'denominazione', 'name': 'Denominazione'},
-    #                 {'id': 'giorni', 'name': 'Giorno'},
-    #                 {'id': 'totale_casi', 'name': 'Totale casi'}
-    #             ]
-    #     ),
-    #     row_selectable=True,
-    #     filterable=False,
-    #     # sortable=True,
-    #     selected_row_indices=['denominazione', 'giorni', 'totale_casi'],
-    #     id='dt-regionale'
-    # )
 
     return data_table
 
 
 def generate_riepilogo_regionale_bar_plain(data: AnalisiDati, regione: int):
-    # df = data.data_regionale[data.data_regionale.codice_regione == regione]
-    # fig = go.Figure(data=[
-    #     go.Bar(name='Nuovi contagi', x=df.giorni, y=df.incrementi),
-    #     go.Bar(name='Nuovi tamponi', x=df.giorni, y=df.incrementi_tamponi)
-    # ])
-    # # Change the bar mode
-    # fig.update_layout(
-    #     barmode='overlay',
-    #     hovermode=hovermode,
-    # )
-    # fig.update_traces(
-    #     opacity=0.6,
-    #     textposition='outside'
-    # )
-    # return fig
     return generate_riepilogo_bar(data, regione, False)
 
 
 def generate_riepilogo_regionale_bar_percentuale(data: AnalisiDati, regione: int):
-    # df = data.data_regionale[data.data_regionale.codice_regione == regione]
-    # fig = go.Figure(data=[
-    #     go.Bar(name='Nuovi contagi', x=df.giorni, y=df.incrementi_percentuali),
-    #     go.Bar(name='Nuovi tamponi', x=df.giorni, y=df.incrementi_tamponi_percentuali)
-    # ])
-    # # Change the bar mode
-    # fig.update_layout(
-    #     barmode='overlay',
-    #     hovermode=hovermode,
-    # )
-    # fig.update_traces(
-    #     opacity=0.6,
-    #     textposition='outside',
-    #     hovertemplate="%{y:.1%}"
-    # )
-    # return fig
     return generate_riepilogo_bar(data, regione, True)
+
 
 def generate_riepilogo_province(data: AnalisiDati, regione: int):
     df = data.data_provinciale[data.data_provinciale.codice_regione == regione]
@@ -310,9 +303,7 @@ def generate_riepilogo_province(data: AnalisiDati, regione: int):
 
 
 def main_func():
-    repo_path = '/Users/bruand/Documents Local/analisi/COVID-19'
-    #_ = RepoManager.update_repo(repo_path)
-    #repo_path = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master"
+    repo_path = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master"
     nazionale = f'{repo_path}/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv'
     regioni = f'{repo_path}/dati-regioni/dpc-covid19-ita-regioni.csv'
     province = f'{repo_path}/dati-province/dpc-covid19-ita-province.csv'
