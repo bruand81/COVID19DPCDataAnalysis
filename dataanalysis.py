@@ -15,15 +15,18 @@ class AnalisiDati:
     __codici_regione = None
     __data_provinciale = None
     __color_map = "gist_rainbow"
+    __max_days= 0
 
-    def __init__(self, file_nazionale, file_regioni, file_province, show=False, store=True, color_map=None, time_str=None):
+    def __init__(self, file_nazionale, file_regioni, file_province, show=False, store=True, color_map=None,
+                 time_str=None, max_days=0):
         self.__showGraph = show
         self.__storeGraph = store
-        self.__data_nazionale = DataManager.nazionale_data(file_nazionale)
+        self.__max_days=max_days
+        self.__data_nazionale = DataManager.nazionale_data(file_nazionale, max_days=self.__max_days)
         max_data = self.__data_nazionale.data.max()
         self.__time_str = time_str if time_str is not None else max_data[:10].replace("-", "")
-        self.__data_regionale, self.__codici_regione = DataManager.regioni_data(file_regioni)
-        self.__data_provinciale = DataManager.province_data(file_province)
+        self.__data_regionale, self.__codici_regione = DataManager.regioni_data(file_regioni, max_days=self.__max_days)
+        self.__data_provinciale = DataManager.province_data(file_province, max_days=self.__max_days)
         self.__color_map = self.__color_map if color_map is None else color_map
 
     @property

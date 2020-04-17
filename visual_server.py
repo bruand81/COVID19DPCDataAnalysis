@@ -7,6 +7,7 @@ import dash_html_components as html
 import dash_table as dt
 import locale
 from urllib.request import urlopen
+import pandas as pd
 import json
 
 with urlopen(
@@ -71,26 +72,6 @@ def generate_riepilogo_mappa(data: AnalisiDati):
     return mappa_nazionale
 
 
-# def generate_riepilogo_mappa(data: AnalisiDati):
-#     df = data.data_regionale_latest
-#     mappa_nazionale = px.choropleth_mapbox(df, geojson=counties, locations='denominazione', color='totale_casi',
-#                                            color_continuous_scale="Viridis",
-#                                            range_color=(0, 26),
-#                                            mapbox_style="dark",
-#
-#                                            zoom=3, center={"lat": 42, "lon": 12},
-#                                            opacity=0.5,
-#                                            labels={'totale_casi': 'Totale casi'}
-#                                            )
-#     mappa_nazionale.update_layout(
-#         margin={"r": 0, "t": 0, "l": 0, "b": 0},
-#         mapbox=dict(
-#             accesstoken=mapbox_access_token,
-#         )
-#     )
-#     return mappa_nazionale
-
-
 def generate_riepilogo_nazionale(data: AnalisiDati):
     data_nazionale = data.data_nazionale
 
@@ -144,7 +125,7 @@ def generate_riepilogo_nazionale(data: AnalisiDati):
 
 def generate_riepilogo_regionale(data: AnalisiDati):
     riepilogo_regioni = px.line(data.data_regionale, x="giorni", y="totale_casi", color="denominazione",
-                                line_shape="spline", color_discrete_sequence=px.colors.qualitative.Dark24)
+                                line_shape="linear", color_discrete_sequence=px.colors.qualitative.Dark24)
 
     riepilogo_regioni.update_layout(
         yaxis_type="log",
@@ -161,33 +142,85 @@ def generate_riepilogo_regionale(data: AnalisiDati):
     return riepilogo_regioni
 
 
-def generate_riepilogo_bar(data: AnalisiDati, regione: int, use_percentage: bool):
+def generate_riepilogo_bar_regione(data: AnalisiDati, regione: int, use_percentage: bool):
     df = data.data_regionale[data.data_regionale.codice_regione == regione]
-    y_contagi = df.incrementi_percentuali if use_percentage else df.incrementi
-    y_tamponi = df.incrementi_tamponi_percentuali if use_percentage else df.incrementi_tamponi
+    return generate_riepilogo_bar(data=df, use_percentage=use_percentage)
+
+
+def generate_riepilogo_pressione_ospedali_bar_regione(data: AnalisiDati, regione: int, use_percentage: bool):
+    df = data.data_regionale[data.data_regionale.codice_regione == regione]
+    return generate_riepilogo_pressione_ospedali_bar(data=df, use_percentage=use_percentage)
+
+
+def generate_riepilogo_bar(data: pd.DataFrame, use_percentage):
+    y_contagi = data.incrementi_percentuali if use_percentage else data.incrementi
+    y_tamponi = data.incrementi_tamponi_percentuali if use_percentage else data.incrementi_tamponi
     contagi_avg = y_contagi.mean()
     tamponi_avg = y_tamponi.mean()
 
     fig = go.Figure(data=[
-        go.Bar(name='Nuovi contagi', x=df.giorni, y=[x if x < 4 * contagi_avg else 1 for x in y_contagi]),
-        go.Bar(name='Nuovi tamponi', x=df.giorni, y=[x if x < 4 * tamponi_avg else 1 for x in y_tamponi])
+        go.Bar(name='Nuovi contagi', x=data.giorni, y=[x if x < 4 * contagi_avg else 1 for x in y_contagi],
+               marker_color='blue'),
+        go.Bar(name='Nuovi tamponi', x=data.giorni, y=[x if x < 4 * tamponi_avg else 1 for x in y_tamponi],
+               marker_color='green')
     ])
     # Change the bar mode
     fig.update_layout(
-        barmode='overlay',
+        barmode='group',
         hovermode=hovermode,
         height=default_height
     )
     fig.update_traces(
-        opacity=0.4,
+        opacity=1,
         textposition='outside',
         hovertemplate="%{y:.1%}" if use_percentage else "%{y:n}"
     )
     return fig
 
 
-def generate_table_from_data(data: AnalisiDati, regione: int, ) -> dt.DataTable:
-    df = data.data_regionale[data.data_regionale.codice_regione == regione]
+def generate_riepilogo_pressione_ospedali_bar(data: pd.DataFrame, use_percentage):
+    y_ti= data.incrementi_ti_percentuali if use_percentage else data.incrementi_ti
+    y_ricoverati = data.incrementi_ricoverati_percentuali if use_percentage else data.incrementi_ricoverati
+    y_deceduti = data.incrementi_deceduti_percentuali if use_percentage else data.incrementi_deceduti
+    ti_avg = y_ti.mean()
+    ricoverati_avg = y_ricoverati.mean()
+    deceduti_avg = y_deceduti.mean()
+
+    fig = go.Figure(data=[
+        # go.Bar(name='Terapie Intensive', x=data.giorni, y=[x if x < 4 * ti_avg else 1 for x in y_ti],
+        #        marker_color='blue'),
+        # go.Bar(name='Ospedalizzati', x=data.giorni, y=[x if x < 4 * ricoverati_avg else 1 for x in y_ricoverati],
+        #        marker_color='green'),
+        # go.Bar(name='Deceduti', x=data.giorni, y=[x if x < 4 * deceduti_avg else 1 for x in y_deceduti],
+        #        marker_color='red')
+        go.Bar(name='Terapie Intensive', x=data.giorni, y=y_ti, marker_color='blue', textposition='outside',
+               marker_opacity=0.6),
+        go.Bar(name='Ospedalizzati', x=data.giorni, y=y_ricoverati, marker_color='green', textposition='outside',
+               marker_opacity=0.6),
+        go.Bar(name='Deceduti', x=data.giorni, y=y_deceduti, marker_color='red', textposition='outside',
+               marker_opacity=0.6)
+    ])
+
+    if not use_percentage:
+        fig.add_trace(go.Scatter(name='Terapie Intensive', x=data.giorni, y=y_ti, marker_color='blue', mode='lines+markers'))
+        fig.add_trace(go.Scatter(name='Ospedalizzati', x=data.giorni, y=y_ricoverati, marker_color='green', mode='lines+markers'))
+        fig.add_trace(go.Scatter(name='Deceduti', x=data.giorni, y=y_deceduti, marker_color='red', mode='lines+markers'))
+    # Change the bar mode
+    fig.update_layout(
+        barmode='group',
+        hovermode=hovermode,
+        height=default_height
+    )
+    fig.update_traces(
+        opacity=1,
+        hovertemplate="%{y:.1%}" if use_percentage else "%{y:n}"
+    )
+    return fig
+
+
+def generate_table_from_data(data: AnalisiDati) -> dt.DataTable:
+    #df = data.data_regionale[data.data_regionale.codice_regione == regione]
+    df = pd.merge(data.data_nazionale_latest, data.data_regionale_latest, how='outer')
     data_table = dt.DataTable(
         id='rdt',
         columns=(
@@ -204,7 +237,10 @@ def generate_table_from_data(data: AnalisiDati, regione: int, ) -> dt.DataTable:
                 {'id': 'dimessi_guariti', 'name': 'Guariti'},
                 {'id': 'deceduti', 'name': 'Deceduti'},
                 {'id': 'tamponi', 'name': 'Tamponi'},
-                {'id': 'incrementi_tamponi', 'name': 'Incremento tamponi'}
+                {'id': 'incrementi_tamponi', 'name': 'Incr. tamponi'},
+                {'id': 'incrementi_ti', 'name': 'Incr. t.intensiva'},
+                {'id': 'incrementi_ricoverati', 'name': 'Incr. ricoverati'},
+                {'id': 'incrementi_deceduti', 'name': 'Incr. deceduti'}
             ]
         ),
         data=df[[
@@ -220,7 +256,10 @@ def generate_table_from_data(data: AnalisiDati, regione: int, ) -> dt.DataTable:
             'dimessi_guariti',
             'deceduti',
             'tamponi',
-            'incrementi_tamponi'
+            'incrementi_tamponi',
+            'incrementi_ti',
+            'incrementi_ricoverati',
+            'incrementi_deceduti'
         ]].to_dict(orient='records'),
         editable=False,
         style_table={
@@ -244,25 +283,26 @@ def generate_table_from_data(data: AnalisiDati, regione: int, ) -> dt.DataTable:
                                     'minWidth': '200px',
                                     'textAlign': 'left',
                                     }
-                               ] +
-                               [
+                               ] + [
                                    {'if': {'column_id': c},
                                     'width': '10%',
                                     'minWidth': '150px',
                                     'textAlign': 'left'} for c in [
-                                   'giorni',
-                                   'totale_casi',
-                                   'incrementi',
-                                   'ricoverati_con_sintomi',
-                                   'terapia_intensiva',
-                                   'totale_ospedalizzati',
-                                   'isolamento_domiciliare',
-                                   'nuovi_positivi',
-                                   'dimessi_guariti',
-                                   'deceduti',
-                                   'tamponi',
-                                   'incrementi_tamponi'
-                               ]
+                                     'giorni',
+                                     'totale_casi',
+                                     'incrementi',
+                                     'ricoverati_con_sintomi',
+                                     'terapia_intensiva',
+                                     'totale_ospedalizzati',
+                                     'isolamento_domiciliare',
+                                     'nuovi_positivi',
+                                     'dimessi_guariti',
+                                     'deceduti',
+                                     'tamponi',
+                                     'incrementi_tamponi',
+                                     'incrementi_ti',
+                                     'incrementi_ricoverati',
+                                     'incrementi_deceduti']
                                ],
         style_header={
             'backgroundColor': 'rgb(230, 230, 230)',
@@ -270,17 +310,48 @@ def generate_table_from_data(data: AnalisiDati, regione: int, ) -> dt.DataTable:
         },
         fixed_columns={'headers': True, 'data': 2},
         fixed_rows={'headers': True, 'data': 0},
+        filter_action="native",
+        sort_action="native",
+        sort_mode="multi",
     )
 
     return data_table
 
 
 def generate_riepilogo_regionale_bar_plain(data: AnalisiDati, regione: int):
-    return generate_riepilogo_bar(data, regione, False)
+    return generate_riepilogo_bar_regione(data, regione, False)
 
 
 def generate_riepilogo_regionale_bar_percentuale(data: AnalisiDati, regione: int):
-    return generate_riepilogo_bar(data, regione, True)
+    return generate_riepilogo_bar_regione(data, regione, True)
+
+
+def generate_riepilogo_pressione_ospedali_regionale_bar_plain(data: AnalisiDati, regione: int):
+    return generate_riepilogo_pressione_ospedali_bar_regione(data, regione, False)
+
+
+def generate_riepilogo_pressione_ospedali_regionale_bar_percentuale(data: AnalisiDati, regione: int):
+    return generate_riepilogo_pressione_ospedali_bar_regione(data, regione, True)
+
+
+def generate_riepilogo_nazionale_bar_plain(data: AnalisiDati):
+    df = data.data_nazionale
+    return generate_riepilogo_bar(df, False)
+
+
+def generate_riepilogo_nazionale_bar_percentuale(data: AnalisiDati):
+    df = data.data_nazionale
+    return generate_riepilogo_bar(df, True)
+
+
+def generate_riepilogo_pressione_ospedali_nazionale_bar_plain(data: AnalisiDati):
+    df = data.data_nazionale
+    return generate_riepilogo_pressione_ospedali_bar(df, False)
+
+
+def generate_riepilogo_pressione_ospedali_nazionale_bar_percentuale(data: AnalisiDati):
+    df = data.data_nazionale
+    return generate_riepilogo_pressione_ospedali_bar(df, True)
 
 
 def generate_riepilogo_province(data: AnalisiDati, regione: int):
@@ -309,7 +380,7 @@ def main_func():
     province = f'{repo_path}/dati-province/dpc-covid19-ita-province.csv'
 
     analysis = AnalisiDati(file_nazionale=nazionale, file_regioni=regioni,
-                           file_province=province, show=False, store=True, color_map="brg")
+                           file_province=province, show=False, store=True, color_map="brg", max_days=30)
 
     last_update_date = analysis.last_update
 
@@ -323,11 +394,23 @@ def main_func():
 
     riepilogo_province = generate_riepilogo_province(analysis, selected_region)
 
+    bar_chart = generate_riepilogo_nazionale_bar_plain(analysis)
+
+    bar_chart_percentuale = generate_riepilogo_nazionale_bar_percentuale(analysis)
+
     bar_chart_regione = generate_riepilogo_regionale_bar_plain(analysis, selected_region)
 
     bar_chart_regione_percentuale = generate_riepilogo_regionale_bar_percentuale(analysis, selected_region)
 
-    regione_dt = generate_table_from_data(analysis, selected_region)
+    bar_chart_po = generate_riepilogo_pressione_ospedali_nazionale_bar_plain(analysis)
+
+    bar_chart_percentuale_po = generate_riepilogo_pressione_ospedali_nazionale_bar_percentuale(analysis)
+
+    bar_chart_regione_po = generate_riepilogo_pressione_ospedali_regionale_bar_plain(analysis, selected_region)
+
+    bar_chart_regione_percentuale_po = generate_riepilogo_pressione_ospedali_regionale_bar_percentuale(analysis, selected_region)
+
+    full_dt = generate_table_from_data(analysis)
 
     app = dash.Dash()
     app.layout = html.Div(children=[
@@ -337,6 +420,12 @@ def main_func():
             html.H2(children='Mappa del contagio in Italia'),
             html.Hr(),
             dcc.Graph(figure=mappa_nazionale)
+        ]),
+        html.Hr(),
+        html.Div(id="riepilogo_table", children=[
+            html.H3(children='Tabella riepilogativa'),
+            html.Hr(),
+            full_dt
         ]),
         html.Hr(),
         html.Div(id="riepilogo_italia", children=[
@@ -351,13 +440,31 @@ def main_func():
             dcc.Graph(figure=riepilogo_regioni)
         ]),
         html.Hr(),
-        html.H2(children='Analisi covid 19 in Campania'),
-        html.Hr(),
-        html.Div(id="riepilogo_regione_table", children=[
-            html.H3(children='Tabella riepilogativa'),
+        html.Div(id="riepilogo_bar", children=[
+            html.H3(children='Grafico a barre riepilogativo '),
             html.Hr(),
-            regione_dt
+            dcc.Graph(figure=bar_chart)
         ]),
+        html.Hr(),
+        html.Div(id="riepilogo_bar_perc", children=[
+            html.H3(children='Grafico a barre riepilogativo in percentuale'),
+            html.Hr(),
+            dcc.Graph(figure=bar_chart_percentuale)
+        ]),
+        html.Hr(),
+        html.Div(id="riepilogo_bar_po", children=[
+            html.H3(children='Grafico a barre riepilogativo pressione ospedali'),
+            html.Hr(),
+            dcc.Graph(figure=bar_chart_po)
+        ]),
+        html.Hr(),
+        html.Div(id="riepilogo_bar_perc_po", children=[
+            html.H3(children='Grafico a barre riepilogativo pressione ospedali in percentuale'),
+            html.Hr(),
+            dcc.Graph(figure=bar_chart_percentuale_po)
+        ]),
+        html.Hr(),
+        html.H2(children='Analisi covid 19 in Campania'),
         html.Hr(),
         html.Div(id="riepilogo_regione_bar", children=[
             html.H3(children='Grafico a barre riepilogativo della Campania'),
@@ -369,6 +476,18 @@ def main_func():
             html.H3(children='Grafico a barre riepilogativo della Campania in percentuale'),
             html.Hr(),
             dcc.Graph(figure=bar_chart_regione_percentuale)
+        ]),
+        html.Hr(),
+        html.Div(id="riepilogo_regione_bar_po", children=[
+            html.H3(children='Grafico a barre riepilogativo pressione ospedali della Campania'),
+            html.Hr(),
+            dcc.Graph(figure=bar_chart_regione_po)
+        ]),
+        html.Hr(),
+        html.Div(id="riepilogo_regione_bar_perc_po", children=[
+            html.H3(children='Grafico a barre riepilogativo pressione ospedali della Campania in percentuale'),
+            html.Hr(),
+            dcc.Graph(figure=bar_chart_regione_percentuale_po)
         ]),
         html.Hr(),
         html.Div(id="riepilogo province", children=[
