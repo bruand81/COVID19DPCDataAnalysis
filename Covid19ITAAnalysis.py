@@ -1,6 +1,7 @@
 from datamanager import DataManager
 from repomanager import RepoManager
 from dataanalysis import AnalisiDati
+import dateutil.parser
 
 force_graph_generation = False
 gen_nazionale = True
@@ -12,8 +13,10 @@ store = True
 
 
 def main_func():
+    # repo_path = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master"
     repo_path = '/Users/bruand/Documents Local/analisi/COVID-19'
     updated = RepoManager.update_repo(repo_path)
+    updated = True
     if force_graph_generation or updated:
         print(f'Repository aggiornato. Rigenerazione grafici in corso')
         nazionale_latest = f'{repo_path}/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-latest.csv'
@@ -22,12 +25,17 @@ def main_func():
         province = f'{repo_path}/dati-province/dpc-covid19-ita-province.csv'
         regioni_latest = f'{repo_path}/dati-regioni/dpc-covid19-ita-regioni-latest.csv'
 
-        time_str = DataManager.get_last_update(nazionale_latest)
+        analysis = AnalisiDati(file_nazionale=nazionale, file_regioni=regioni,
+                               file_province=province, show=False, store=True, color_map="brg", max_days=30)
+
+        time_str = analysis.last_update_short
+        # time_str = DataManager.get_last_update(nazionale_latest)
+        last_update_date = dateutil.parser.parse(analysis.last_update)
         output_base_path = f'output/{time_str}/'
         output_base_path_reg = f'{output_base_path}regionale/'
         output_base_path_prov = f'{output_base_path}provinciale/'
-        analysis = AnalisiDati(time_str=time_str, file_nazionale=nazionale, file_regioni=regioni,
-                               file_province=province, show=False, store=True, color_map="brg")
+        # analysis = AnalisiDati(time_str=time_str, file_nazionale=nazionale, file_regioni=regioni,
+        #                        file_province=province, show=False, store=True, color_map="brg")
         if gen_nazionale:
             analysis.analisi_nazione(file_nazionale=nazionale, output_base=output_base_path, show=show, store=store)
 

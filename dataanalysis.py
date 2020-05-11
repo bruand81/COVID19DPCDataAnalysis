@@ -57,6 +57,10 @@ class AnalisiDati:
     def last_update(self):
         return self.__data_nazionale.data.max()
 
+    @property
+    def last_update_short(self):
+        return self.__data_nazionale.data.max()[:10].replace("-", "")
+
     def data_latest(self, data):
         max_data = self.__data_nazionale.data.max()
         return data[data.data == max_data]

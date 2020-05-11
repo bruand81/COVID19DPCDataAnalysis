@@ -9,10 +9,16 @@ import locale
 from urllib.request import urlopen
 import pandas as pd
 import json
+import dateutil.parser
+# import shapefile
 
 with urlopen(
         'https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson') as response:
     counties = json.load(response)
+
+geojson_file = '/Users/bruand/Documents Local/analisi/Limiti01012020_g/Reg01012020_g/Reg01012020_g_WGS84.json'
+with open(geojson_file) as json_file:
+    dati_json = json.load(json_file)
 
 locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
 
@@ -34,6 +40,9 @@ def generate_riepilogo_mappa(data: AnalisiDati):
                                             'terapia-intensiva': 'Terapia intensiva'
                                         })
 
+    # file_regioni_json = 'https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson'
+    file_regioni_json = geojson_file
+
     mappa_nazionale.update_layout(
         title='Situazione nelle regioni',
         autosize=True,
@@ -53,6 +62,7 @@ def generate_riepilogo_mappa(data: AnalisiDati):
                 dict(
                     sourcetype='geojson',
                     source='https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson',
+                    # source='file://Users/bruand/Documents Local/analisi/Limiti01012020_g/Reg01012020_g/Reg01012020_g_WGS84.json',
                     type='fill',
                     below='traces',
                     color='rgba(112,161,215,0.8)'
@@ -60,6 +70,7 @@ def generate_riepilogo_mappa(data: AnalisiDati):
                 dict(
                     sourcetype='geojson',
                     source='https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson',
+                    # source='file://Users/bruand/Documents Local/analisi/Limiti01012020_g/Reg01012020_g/Reg01012020_g_WGS84.json',
                     type='line',
                     below='traces',
                     color='white'
@@ -69,7 +80,53 @@ def generate_riepilogo_mappa(data: AnalisiDati):
         height=800,
         width=1500
     )
+
     return mappa_nazionale
+
+
+def generate_riepilogo_mappa2(data: AnalisiDati):
+    df = data.data_regionale_latest.sort_values(by="totale_casi", ascending=False)
+    # print(df["codice_regione"][1251])
+    # print(dati_json["features"][0]["properties"])
+
+    # fig = px.choropleth_mapbox(df, geojson=dati_json,  color='totale_casi',
+    #                            locations='codice_regione',
+    #                            featureidkey="properties.codice_regione",
+    #                            center={"lat": 42, "lon": 12},
+    #                            mapbox_style="carto-positron", zoom=9)
+    #                            mapbox_style="carto-positron",
+    #                            zoom=3, center={"lat": 42, "lon": 12},
+    #                            opacity=0.5,
+    #                            labels={'totale_casi': 'Totale casi'}
+    #                            )
+    fig = go.Figure(go.Choroplethmapbox(geojson=counties, locations=df.denominazione, z=df.totale_casi,
+                                        featureidkey="properties.Regione",
+                                        colorscale="Viridis", zmin=0, zmax=df.totale_casi.max(),
+                                        marker_opacity=0.5, marker_line_width=0))
+    fig.update_layout(mapbox_style="carto-positron",
+                      mapbox_zoom=3, mapbox_center={"lat": 42, "lon": 12})
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+
+    # fig.update_layout(
+    #     title='Situazione nelle regioni',
+    #     autosize=True,
+    #     hovermode='closest',
+    #     showlegend=True,
+    #     mapbox=dict(
+    #         accesstoken=mapbox_access_token,
+    #         bearing=0,
+    #         center=dict(
+    #             lat=42,
+    #             lon=12
+    #         ),
+    #         pitch=0,
+    #         zoom=5,
+    #         style='dark',
+    #     ),
+    #     height=800,
+    #     width=1500
+    # )
+    return fig
 
 
 def generate_riepilogo_nazionale(data: AnalisiDati):
@@ -374,6 +431,9 @@ def generate_riepilogo_province(data: AnalisiDati, regione: int):
 
 
 def main_func():
+    # shape_path = "/Users/bruand/Documents Local/analisi/Limiti01012020_g/Reg01012020_g/Reg01012020_g_WGS84"
+    # sf = shapefile.Reader(shape_path)
+    # print(sf)
     repo_path = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master"
     nazionale = f'{repo_path}/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale.csv'
     regioni = f'{repo_path}/dati-regioni/dpc-covid19-ita-regioni.csv'
@@ -382,7 +442,7 @@ def main_func():
     analysis = AnalisiDati(file_nazionale=nazionale, file_regioni=regioni,
                            file_province=province, show=False, store=True, color_map="brg", max_days=30)
 
-    last_update_date = analysis.last_update
+    last_update_date = dateutil.parser.parse(analysis.last_update)
 
     selected_region = 15
 
@@ -411,10 +471,11 @@ def main_func():
     bar_chart_regione_percentuale_po = generate_riepilogo_pressione_ospedali_regionale_bar_percentuale(analysis, selected_region)
 
     full_dt = generate_table_from_data(analysis)
+    print(f'Analisi covid 19 in Italia a {last_update_date.strftime("%A %d %B %Y")}')
 
     app = dash.Dash()
     app.layout = html.Div(children=[
-        html.H1(children=f'Analisi covid 19 in Italia al {last_update_date}'),
+        html.H1(children=f'Analisi covid 19 in Italia a {last_update_date.strftime("%A %d %B %Y")}'),
         html.Hr(),
         html.Div(id="mappa_italia", children=[
             html.H2(children='Mappa del contagio in Italia'),

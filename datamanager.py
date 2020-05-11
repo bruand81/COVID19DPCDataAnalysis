@@ -49,11 +49,15 @@ class DataManager:
             values = data_prov[data_prov["codice_provincia"] == prov]
             prev_day_contagi = 0
             for i, row in values.iterrows():
-                today_increment_contagi = row['totale_casi'] - prev_day_contagi
-                data_prov['incrementi'].loc[i] = today_increment_contagi
-                data_prov['incrementi_percentuali'].loc[
-                    i] = 0 if prev_day_contagi == 0 else today_increment_contagi / prev_day_contagi
-                prev_day_contagi = row['totale_casi']
+                try:
+                    today_increment_contagi = row['totale_casi'] - prev_day_contagi
+                    data_prov['incrementi'].loc[i] = today_increment_contagi
+                    data_prov['incrementi_percentuali'].loc[
+                        i] = 0 if prev_day_contagi == 0 else today_increment_contagi / prev_day_contagi
+                    prev_day_contagi = row['totale_casi']
+                except:
+                    data_prov.drop([i])
+                    continue
         pd.reset_option('mode.chained_assignment')
         return DataManager.get_last_n_days_of_data(data=data_prov, max_days=max_days)
 
