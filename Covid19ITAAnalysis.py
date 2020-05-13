@@ -16,7 +16,7 @@ def main_func():
     # repo_path = "https://raw.githubusercontent.com/pcm-dpc/COVID-19/master"
     repo_path = '/Users/bruand/Documents Local/analisi/COVID-19'
     updated = RepoManager.update_repo(repo_path)
-    updated = True
+    # updated = True
     if force_graph_generation or updated:
         print(f'Repository aggiornato. Rigenerazione grafici in corso')
         nazionale_latest = f'{repo_path}/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-latest.csv'
