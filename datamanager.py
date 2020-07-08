@@ -11,12 +11,14 @@ class DataManager:
     @staticmethod
     def nazionale_data(file_nazionale, max_days=0):
         data_naz = pd.read_csv(file_nazionale)
+        data_naz.fillna(0)
         DataManager.__parse_data_as_dataframe(data_naz)
         return DataManager.get_last_n_days_of_data(data=data_naz, max_days=max_days)
 
     @staticmethod
     def regioni_data(file_regioni, head_region=0, must_region=None, max_days=0):
         data_reg = pd.read_csv(file_regioni)
+        data_reg.fillna(0)
         idx = data_reg.sort_values(by="totale_casi", ascending=False).codice_regione.unique()
 
         if head_region == 0:
@@ -38,6 +40,7 @@ class DataManager:
     @staticmethod
     def province_data(file_province, max_days=0):
         data_prov = pd.read_csv(file_province)
+        data_prov.fillna(0)
         data_prov['denominazione'] = data_prov['denominazione_provincia']
         data_prov['giorni'] = data_prov['data'].str.slice(stop=10)
         data_prov['incrementi'] = 0
@@ -64,6 +67,7 @@ class DataManager:
     @staticmethod
     def get_all_region(file_regioni):
         data_reg = pd.read_csv(file_regioni)
+        data_reg.fillna(0)
 
         codici_regione = np.unique(data_reg.codice_regione.to_numpy())
 
@@ -72,6 +76,7 @@ class DataManager:
     @staticmethod
     def get_last_update(file_latest):
         data = pd.read_csv(file_latest)
+        data.fillna(0)
         return data.data[0][:10].replace("-", "")
 
     @staticmethod
@@ -87,6 +92,12 @@ class DataManager:
         data['incrementi_ricoverati_percentuali'] = 0.0
         data['incrementi_deceduti'] = 0
         data['incrementi_deceduti_percentuali'] = 0.0
+        data['incrementi_casi_testati'] = 0
+        data['incrementi_casi_testati_percentuali'] = 0.0
+        data['incrementi_casi_da_sospetto_diagnostico'] = 0
+        data['incrementi_casi_da_sospetto_diagnostico_percentuali'] = 0.0
+        data['incrementi_casi_da_screening'] = 0
+        data['incrementi_casi_da_screening_percentuali'] = 0.0
         data['denominazione'] = ''
 
         if 'codice_regione' in data.columns:
@@ -107,12 +118,18 @@ class DataManager:
             prev_day_ti = 0
             prev_day_ricoverati = 0
             prev_day_deceduti = 0
+            prev_day_ct = 0
+            prev_day_sd = 0
+            prev_day_screening = 0
             for i, row in values.iterrows():
                 today_increment_contagi = row['totale_casi'] - prev_day_contagi
                 today_increment_tamponi = row['tamponi'] - prev_day_tamponi
                 today_increment_ti = row['terapia_intensiva'] - prev_day_ti
                 today_increment_ricoverati = row['ricoverati_con_sintomi'] - prev_day_ricoverati
                 today_increment_deceduti = row['deceduti'] - prev_day_deceduti
+                today_increment_ct = row['casi_testati'] - prev_day_ct
+                today_increment_sd = row['casi_da_sospetto_diagnostico'] - prev_day_sd
+                today_increment_screening = row['casi_da_screening'] - prev_day_screening
                 data['incrementi'].loc[i] = today_increment_contagi
                 data['incrementi_percentuali'].loc[
                     i] = 0 if prev_day_contagi == 0 else today_increment_contagi / prev_day_contagi
@@ -128,9 +145,21 @@ class DataManager:
                 data['incrementi_deceduti'].loc[i] = today_increment_deceduti
                 data['incrementi_deceduti_percentuali'].loc[
                     i] = 0 if prev_day_deceduti == 0 else today_increment_deceduti / prev_day_deceduti
+                data['incrementi_casi_testati'].loc[i] = today_increment_ct
+                data['incrementi_casi_testati_percentuali'].loc[
+                    i] = 0 if prev_day_ct == 0 else today_increment_ct / prev_day_ct
+                data['incrementi_casi_da_sospetto_diagnostico'].loc[i] = today_increment_sd
+                data['incrementi_casi_da_sospetto_diagnostico_percentuali'].loc[
+                    i] = 0 if prev_day_sd == 0 else today_increment_sd / prev_day_sd
+                data['incrementi_casi_da_screening'].loc[i] = today_increment_screening
+                data['incrementi_casi_da_screening_percentuali'].loc[
+                    i] = 0 if prev_day_screening == 0 else today_increment_screening / prev_day_screening
                 prev_day_contagi = row['totale_casi']
                 prev_day_tamponi = row['tamponi']
                 prev_day_ti = row['terapia_intensiva']
                 prev_day_ricoverati = row['ricoverati_con_sintomi']
                 prev_day_deceduti = row['deceduti']
+                prev_day_ct = row['casi_testati']
+                prev_day_sd = row['casi_da_sospetto_diagnostico']
+                prev_day_screening = row['casi_da_screening']
         pd.reset_option('mode.chained_assignment')

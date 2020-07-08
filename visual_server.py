@@ -33,12 +33,25 @@ def generate_riepilogo_mappa(data: AnalisiDati):
 
     mappa_nazionale = px.scatter_mapbox(df, lat="lat", lon="long", color="denominazione", size="totale_casi",
                                         # color_discrete_sequence=px.colors.qualitative.Dark24,
+                                        hover_data=['totale_casi', 'casi_da_sospetto_diagnostico', 'casi_da_screening', 'deceduti', 'terapia_intensiva'],
                                         color_discrete_sequence=['red'],
                                         labels={
                                             'totale_casi': 'Totale casi',
+                                            'casi_da_sospetto_diagnostico': 'Nuove diagnosi',
+                                            'casi_da_screening': 'Screening',
                                             'deceduti': 'Deceduti',
-                                            'terapia-intensiva': 'Terapia intensiva'
+                                            'terapia_intensiva': 'Terapia intensiva'
                                         })
+    # mappa_nazionale = px.scatter_mapbox(df, lat="lat", lon="long", color="denominazione", size=['totale_casi', 'casi_da_sospetto_diagnostico', 'casi_da_screening', 'deceduti', 'terapia-intensiva'],
+    #                                     # color_discrete_sequence=px.colors.qualitative.Dark24,
+    #                                     color_discrete_sequence=['red'],
+    #                                     labels={
+    #                                         'totale_casi': 'Totale casi',
+    #                                         'casi_da_sospetto_diagnostico': 'Nuove diagnosi',
+    #                                         'casi_da_screening': 'Screening',
+    #                                         'deceduti': 'Deceduti',
+    #                                         'terapia-intensiva': 'Terapia intensiva'
+    #                                     })
 
     # file_regioni_json = 'https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson'
     file_regioni_json = geojson_file
@@ -294,10 +307,14 @@ def generate_table_from_data(data: AnalisiDati) -> dt.DataTable:
                 {'id': 'dimessi_guariti', 'name': 'Guariti'},
                 {'id': 'deceduti', 'name': 'Deceduti'},
                 {'id': 'tamponi', 'name': 'Tamponi'},
+                {'id': 'casi_testati', 'name': 'Casi t.'},
                 {'id': 'incrementi_tamponi', 'name': 'Incr. tamponi'},
                 {'id': 'incrementi_ti', 'name': 'Incr. t.intensiva'},
                 {'id': 'incrementi_ricoverati', 'name': 'Incr. ricoverati'},
-                {'id': 'incrementi_deceduti', 'name': 'Incr. deceduti'}
+                {'id': 'incrementi_deceduti', 'name': 'Incr. deceduti'},
+                {'id': 'incrementi_casi_testati', 'name': 'Incr. casi testati'},
+                {'id': 'incrementi_casi_da_sospetto_diagnostico', 'name': 'Incr. casi diagnostici'},
+                {'id': 'incrementi_casi_da_screening', 'name': 'Incr. casi screening'}
             ]
         ),
         data=df[[
@@ -313,10 +330,14 @@ def generate_table_from_data(data: AnalisiDati) -> dt.DataTable:
             'dimessi_guariti',
             'deceduti',
             'tamponi',
+            'casi_testati',
             'incrementi_tamponi',
             'incrementi_ti',
             'incrementi_ricoverati',
-            'incrementi_deceduti'
+            'incrementi_deceduti',
+            'incrementi_casi_testati',
+            'incrementi_casi_da_sospetto_diagnostico',
+            'incrementi_casi_da_screening'
         ]].to_dict(orient='records'),
         editable=False,
         style_table={
@@ -355,11 +376,15 @@ def generate_table_from_data(data: AnalisiDati) -> dt.DataTable:
                                      'nuovi_positivi',
                                      'dimessi_guariti',
                                      'deceduti',
-                                     'tamponi',
+                                     'tamponi'
+                                     'casi_testati',
                                      'incrementi_tamponi',
                                      'incrementi_ti',
                                      'incrementi_ricoverati',
-                                     'incrementi_deceduti']
+                                     'incrementi_deceduti',
+                                     'incrementi_casi_testati',
+                                     'incrementi_casi_da_sospetto_diagnostico',
+                                     'incrementi_casi_da_screening']
                                ],
         style_header={
             'backgroundColor': 'rgb(230, 230, 230)',
