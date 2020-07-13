@@ -16,9 +16,9 @@ with urlopen(
         'https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson') as response:
     counties = json.load(response)
 
-geojson_file = '/Users/bruand/Documents Local/analisi/Limiti01012020_g/Reg01012020_g/Reg01012020_g_WGS84.json'
-with open(geojson_file) as json_file:
-    dati_json = json.load(json_file)
+#geojson_file = '/Users/bruand/Documents Local/analisi/Limiti01012020_g/Reg01012020_g/Reg01012020_g_WGS84.json'
+#with open(geojson_file) as json_file:
+#    dati_json = json.load(json_file)
 
 locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
 
@@ -54,7 +54,7 @@ def generate_riepilogo_mappa(data: AnalisiDati):
     #                                     })
 
     # file_regioni_json = 'https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson'
-    file_regioni_json = geojson_file
+    # file_regioni_json = geojson_file
 
     mappa_nazionale.update_layout(
         title='Situazione nelle regioni',
