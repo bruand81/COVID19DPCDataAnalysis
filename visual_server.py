@@ -471,6 +471,16 @@ def main_func():
 
     selected_region = 15
 
+    perc_positive_people_tested = ((analysis.data_nazionale_latest['nuovi_positivi']) / (analysis.data_nazionale_latest['incrementi_casi_testati'])).iloc[0]
+
+    perc_positive_tested = ((analysis.data_nazionale_latest['nuovi_positivi']) / (analysis.data_nazionale_latest['incrementi_tamponi'])).iloc[0]
+
+    latest_data_region = analysis.data_regionale_latest[analysis.data_regionale_latest.codice_regione == selected_region]
+
+    perc_positive_people_tested_region = ((latest_data_region.nuovi_positivi) / (latest_data_region.incrementi_casi_testati)).iloc[0]
+
+    perc_positive_tested_region = ((latest_data_region.nuovi_positivi) / (latest_data_region.incrementi_tamponi)).iloc[0]
+
     riepilogo_nazionale = generate_riepilogo_nazionale(analysis)
 
     mappa_nazionale = generate_riepilogo_mappa(analysis)
@@ -501,6 +511,14 @@ def main_func():
     app = dash.Dash()
     app.layout = html.Div(children=[
         html.H1(children=f'Analisi covid 19 in Italia a {last_update_date.strftime("%A %d %B %Y")}'),
+        html.Hr(),
+        html.Div(id="valori_essenziali", children=[
+            html.H3(children=[
+                html.Span(children='Percentuale positivi/tamponi: '),
+                html.Span(style={'color': 'red' if (perc_positive_tested >= 0.03) else 'green'}, children=f'{perc_positive_tested:.2%}'),
+                html.Span(children=' - Percentuale positivi/persone testati: '),
+                html.Span(style={'color': 'red' if (perc_positive_people_tested >= 0.03) else 'green'}, children=f'{perc_positive_people_tested:.2%}')]),
+        ]),
         html.Hr(),
         html.Div(id="mappa_italia", children=[
             html.H2(children='Mappa del contagio in Italia'),
@@ -551,6 +569,14 @@ def main_func():
         ]),
         html.Hr(),
         html.H2(children='Analisi covid 19 in Campania'),
+        html.Hr(),
+        html.Div(id="valori_essenziali_regione", children=[
+            html.H3(children=[
+                html.Span(children='Percentuale positivi/tamponi: '),
+                html.Span(style={'color': 'red' if (perc_positive_tested_region >= 0.03) else 'green'}, children=f'{perc_positive_tested_region:.2%}'),
+                html.Span(children=' - Percentuale positivi/persone testate: '),
+                html.Span(style={'color': 'red' if (perc_positive_people_tested_region >= 0.03) else 'green'}, children=f'{perc_positive_people_tested_region:.2%}')]),
+        ]),
         html.Hr(),
         html.Div(id="riepilogo_regione_bar", children=[
             html.H3(children='Grafico a barre riepilogativo della Campania'),
