@@ -471,15 +471,18 @@ def main_func():
 
     selected_region = 15
 
-    perc_positive_people_tested = ((analysis.data_nazionale_latest['nuovi_positivi']) / (analysis.data_nazionale_latest['incrementi_casi_testati'])).iloc[0]
-
-    perc_positive_tested = ((analysis.data_nazionale_latest['nuovi_positivi']) / (analysis.data_nazionale_latest['incrementi_tamponi'])).iloc[0]
+    nuovi_positivi=analysis.data_nazionale_latest['nuovi_positivi'].iloc[0]
+    incrementi_casi_testati=analysis.data_nazionale_latest['incrementi_casi_testati'].iloc[0]
+    incrementi_tamponi=analysis.data_nazionale_latest['incrementi_tamponi'].iloc[0]
+    perc_positive_people_tested = nuovi_positivi / incrementi_casi_testati
+    perc_positive_tested = nuovi_positivi / incrementi_tamponi
 
     latest_data_region = analysis.data_regionale_latest[analysis.data_regionale_latest.codice_regione == selected_region]
-
-    perc_positive_people_tested_region = ((latest_data_region.nuovi_positivi) / (latest_data_region.incrementi_casi_testati)).iloc[0]
-
-    perc_positive_tested_region = ((latest_data_region.nuovi_positivi) / (latest_data_region.incrementi_tamponi)).iloc[0]
+    nuovi_positivi_region=latest_data_region['nuovi_positivi'].iloc[0]
+    incrementi_casi_testati_region=latest_data_region['incrementi_casi_testati'].iloc[0]
+    incrementi_tamponi_region=latest_data_region['incrementi_tamponi'].iloc[0]
+    perc_positive_people_tested_region = nuovi_positivi_region/incrementi_casi_testati_region
+    perc_positive_tested_region = nuovi_positivi_region/incrementi_tamponi_region
 
     riepilogo_nazionale = generate_riepilogo_nazionale(analysis)
 
@@ -514,10 +517,13 @@ def main_func():
         html.Hr(),
         html.Div(id="valori_essenziali", children=[
             html.H3(children=[
-                html.Span(children='Percentuale positivi/tamponi: '),
+                'Percentuale positivi/tamponi: ',
                 html.Span(style={'color': 'red' if (perc_positive_tested >= 0.03) else 'green'}, children=f'{perc_positive_tested:.2%}'),
-                html.Span(children=' - Percentuale positivi/persone testati: '),
-                html.Span(style={'color': 'red' if (perc_positive_people_tested >= 0.03) else 'green'}, children=f'{perc_positive_people_tested:.2%}')]),
+                f' ({nuovi_positivi} su {incrementi_tamponi:.0f})',
+                ' - Percentuale positivi/persone testati: ',
+                html.Span(style={'color': 'red' if (perc_positive_people_tested >= 0.03) else 'green'}, children=f'{perc_positive_people_tested:.2%}'),
+                f' ({nuovi_positivi} su {incrementi_casi_testati:.0f})'
+            ]),
         ]),
         html.Hr(),
         html.Div(id="mappa_italia", children=[
@@ -572,10 +578,13 @@ def main_func():
         html.Hr(),
         html.Div(id="valori_essenziali_regione", children=[
             html.H3(children=[
-                html.Span(children='Percentuale positivi/tamponi: '),
+                'Percentuale positivi/tamponi: ',
                 html.Span(style={'color': 'red' if (perc_positive_tested_region >= 0.03) else 'green'}, children=f'{perc_positive_tested_region:.2%}'),
-                html.Span(children=' - Percentuale positivi/persone testate: '),
-                html.Span(style={'color': 'red' if (perc_positive_people_tested_region >= 0.03) else 'green'}, children=f'{perc_positive_people_tested_region:.2%}')]),
+                f' ({nuovi_positivi_region} su {incrementi_tamponi_region:.0f})',
+                ' - Percentuale positivi/persone testate: ',
+                html.Span(style={'color': 'red' if (perc_positive_people_tested_region >= 0.03) else 'green'}, children=f'{perc_positive_people_tested_region:.2%}'),
+                f' ({nuovi_positivi_region} su {incrementi_casi_testati_region:.0f})',
+            ])
         ]),
         html.Hr(),
         html.Div(id="riepilogo_regione_bar", children=[
