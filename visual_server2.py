@@ -8,16 +8,16 @@ import plotly.express as px
 import locale
 import pandas as pd
 
-locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
-default_height = 800
-hovermode = "x"
-mapbox_access_token = open(".mapbox_token").read()
-colors = px.colors.cyclical.HSV
 
+locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
 
 class VisualServer:
     _data_manager: Covid19Italia = None
     _selected_region: int = 15
+    _default_height = 800
+    _hovermode = "x"
+    _mapbox_access_token = open(".mapbox_token").read()
+    _colors = px.colors.cyclical.HSV
 
     def __init__(self):
         self._selected_region = 15
@@ -115,7 +115,7 @@ class VisualServer:
                 'minWidth': '500px', 'maxWidth': '90%',
                 'whiteSpace': 'normal',
                 'overflowX': 'scroll',
-                'maxHeight': default_height,
+                'maxHeight': self._default_height,
                 'overflowY': 'scroll',
                 'textAlign': 'left'
             },
@@ -136,35 +136,35 @@ class VisualServer:
                                         'width': '10%',
                                         'minWidth': '150px',
                                         'textAlign': 'left'} for c in [
-                    'formatted_date',
-                    'ricoverati_con_sintomi',
-                    'terapia_intensiva',
-                    'totale_ospedalizzati',
-                    'isolamento_domiciliare',
-                    'totale_positivi',
-                    'variazione_totale_positivi',
-                    'nuovi_positivi',
-                    'dimessi_guariti',
-                    'deceduti',
-                    'casi_da_sospetto_diagnostico',
-                    'casi_da_screening',
-                    'totale_casi',
-                    'tamponi',
-                    'casi_testati',
-                    'variazione_tamponi',
-                    'variazione_casi_testati',
-                    'variazione_terapia_intensiva',
-                    'variazione_ricoverati_con_sintomi',
-                    'variazione_deceduti',
-                    'variazione_dimessi_guariti',
-                    'variazione_isolamento_domiciliare',
-                    'variazione_casi_da_screening',
-                    'variazione_casi_da_sospetto_diagnostico',
-                    'percentuale_positivi_tamponi',
-                    'percentuale_positivi_tamponi_giornaliera',
-                    'percentuale_positivi_casi',
-                    'percentuale_positivi_casi_giornaliera',
-                ]
+                                            'formatted_date',
+                                            'ricoverati_con_sintomi',
+                                            'terapia_intensiva',
+                                            'totale_ospedalizzati',
+                                            'isolamento_domiciliare',
+                                            'totale_positivi',
+                                            'variazione_totale_positivi',
+                                            'nuovi_positivi',
+                                            'dimessi_guariti',
+                                            'deceduti',
+                                            'casi_da_sospetto_diagnostico',
+                                            'casi_da_screening',
+                                            'totale_casi',
+                                            'tamponi',
+                                            'casi_testati',
+                                            'variazione_tamponi',
+                                            'variazione_casi_testati',
+                                            'variazione_terapia_intensiva',
+                                            'variazione_ricoverati_con_sintomi',
+                                            'variazione_deceduti',
+                                            'variazione_dimessi_guariti',
+                                            'variazione_isolamento_domiciliare',
+                                            'variazione_casi_da_screening',
+                                            'variazione_casi_da_sospetto_diagnostico',
+                                            'percentuale_positivi_tamponi',
+                                            'percentuale_positivi_tamponi_giornaliera',
+                                            'percentuale_positivi_casi',
+                                            'percentuale_positivi_casi_giornaliera',
+                                        ]
                                    ],
             style_header={
                 'backgroundColor': 'rgb(230, 230, 230)',
@@ -208,7 +208,7 @@ class VisualServer:
                 'minWidth': '500px', 'maxWidth': '90%',
                 'whiteSpace': 'normal',
                 'overflowX': 'scroll',
-                'maxHeight': default_height,
+                'maxHeight': self._default_height,
                 'overflowY': 'scroll',
                 'textAlign': 'left'
             },
@@ -224,20 +224,20 @@ class VisualServer:
                                         'minWidth': '200px',
                                         'textAlign': 'left',
                                         } for c in [
-                    'denominazione_provincia',
-                    'denominazione_regione'
-                ]
+                                            'denominazione_provincia',
+                                            'denominazione_regione'
+                                        ]
                                    ] + [
                                        {'if': {'column_id': c},
                                         'width': '10%',
                                         'minWidth': '150px',
                                         'textAlign': 'left'} for c in [
-                    'formatted_date',
-                    'totale_casi',
-                    'isolamento_domiciliare',
-                    'variazione_totale_casi',
-                    'percentuale_variazione_totale_casi',
-                ]
+                                            'formatted_date',
+                                            'totale_casi',
+                                            'isolamento_domiciliare',
+                                            'variazione_totale_casi',
+                                            'percentuale_variazione_totale_casi',
+                                        ]
                                    ],
             style_header={
                 'backgroundColor': 'rgb(230, 230, 230)',
@@ -270,6 +270,65 @@ class VisualServer:
                 ]),
             ])
 
+    def generate_map(self) -> html.Div:
+        df = self.data_manager.dati_regionali_latest.sort_values(by="totale_casi", ascending=False)
+        mappa_nazionale = px.scatter_mapbox(df, lat="lat", lon="long", color="denominazione_regione", size="totale_casi",
+                                            color_discrete_sequence=px.colors.qualitative.Light24,
+                                            hover_data=['totale_casi', 'casi_da_sospetto_diagnostico',
+                                                        'casi_da_screening', 'deceduti', 'terapia_intensiva'],
+                                            #color_discrete_sequence=['red'],
+                                            labels={
+                                                'denominazione_regione': 'Denominazione regione',
+                                                'totale_casi': 'Totale casi',
+                                                'casi_da_sospetto_diagnostico': 'Nuove diagnosi',
+                                                'casi_da_screening': 'Screening',
+                                                'deceduti': 'Deceduti',
+                                                'terapia_intensiva': 'Terapia intensiva'
+                                            })
+
+        mappa_nazionale.update_layout(
+            title='Situazione nelle regioni',
+            autosize=True,
+            hovermode='closest',
+            showlegend=True,
+            mapbox=dict(
+                accesstoken=self._mapbox_access_token,
+                bearing=0,
+                center=dict(
+                    lat=42,
+                    lon=12
+                ),
+                pitch=0,
+                zoom=5,
+                style='dark',
+                layers=[
+                    dict(
+                        sourcetype='geojson',
+                        source='https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson',
+                        type='fill',
+                        below='traces',
+                        color='rgba(112,161,215,0.8)'
+                        # color=px.colors.qualitative.Light24
+                    ),
+                    dict(
+                        sourcetype='geojson',
+                        source='https://gist.githubusercontent.com/datajournalism-it/f1abb68e718b54f6a0fe/raw/23636ff76534439b52b87a67e766b11fa7373aa9/regioni-con-trento-bolzano.geojson',
+                        type='line',
+                        below='traces',
+                        color='white'
+                    )
+                ],
+            ),
+            height=800,
+            width=1500
+        )
+
+        return html.Div(id="mappa_italia", children=[
+            html.H2(children='Mappa del contagio in Italia'),
+            html.Hr(),
+            dcc.Graph(figure=mappa_nazionale)
+        ])
+
     def serve_layout(self) -> html.Div:
         return html.Div(children=[
             html.H1(children=self.data_manager.latest_update_date.strftime(
@@ -283,12 +342,12 @@ class VisualServer:
                 html.Hr(),
                 self.generate_table_from_data()
             ]),
+            self.generate_map(),
             html.Hr(),
             html.H2(children=[
                 'Riepilogo dati in regione ',
                 self.data_manager.dati_regionali_latest[
-                    self.data_manager.dati_regionali_latest.codice_regione == self.selected_region].denominazione_regione.iloc[
-                    0]]),
+                    self.data_manager.dati_regionali_latest.codice_regione == self.selected_region].denominazione_regione.iloc[0]]),
             html.Hr(),
             self.dati_essenziali(self.data_manager.dati_regionali_latest[
                                      self.data_manager.dati_regionali_latest.codice_regione == self.selected_region],

@@ -93,3 +93,4 @@ table_demo.py
 /build/*
 /output/
 .mapbox_token
+test.py
