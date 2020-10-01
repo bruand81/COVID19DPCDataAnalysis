@@ -1,4 +1,4 @@
-from CovidData import Covid19Italia
+from CovidModels.Covid19Italia import Covid19Italia
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -9,7 +9,7 @@ import plotly.express as px
 import locale
 import pandas as pd
 from urllib.request import urlopen
-import json
+import orjson
 
 locale.setlocale(locale.LC_ALL, 'it_IT.UTF-8')
 
@@ -21,7 +21,7 @@ class VisualServer:
     _hovermode = "x"
     _mapbox_access_token = open(".mapbox_token").read()
     _colors = px.colors.cyclical.HSV
-    _geojson: json = None
+    _geojson: orjson = None
     _report_axis = {'nuovi_positivi': {'title': 'Nuovi positivi', 'scale': 1},
                     'variazione_deceduti': {'title': 'Decessi', 'scale': 1},
                     'variazione_dimessi_guariti': {'title': 'Guariti', 'scale': 1},
@@ -349,12 +349,12 @@ class VisualServer:
         ])
 
     @property
-    def geojson(self) -> json:
+    def geojson(self) -> orjson:
         if self._geojson is None:
             print('Elaborazione dati geojson')
             with open(
                     'files/regioni-con-trento-bolzano.geojson') as response:
-                geojson = json.load(response)
+                geojson = orjson.loads(response.read())
                 correspondance_dict = {"Piemonte": "Piemonte",
                                        "Valle d'Aosta": "Valle d'Aosta",
                                        "Lombardia": "Lombardia",
@@ -395,7 +395,7 @@ class VisualServer:
                                    # color_continuous_scale="Viridis",
                                    # range_color=(0, 12),
                                    center={"lat": 42, "lon": 12},
-                                   mapbox_style="carto-positron",
+                                   mapbox_style="white-bg",
                                    zoom=5,
                                    opacity=0.5,
                                    hover_data=['totale_casi',
@@ -422,17 +422,17 @@ class VisualServer:
                           autosize=True,
                           hovermode='closest',
                           showlegend=True,
-                          mapbox=dict(
-                              accesstoken=self._mapbox_access_token,
-                              bearing=0,
-                              center=dict(
-                                  lat=42,
-                                  lon=12
-                              ),
-                              pitch=0,
-                              zoom=5,
-                              style='dark',
-                          ),
+                          # mapbox=dict(
+                          #     accesstoken=self._mapbox_access_token,
+                          #     bearing=0,
+                          #     center=dict(
+                          #         lat=42,
+                          #         lon=12
+                          #     ),
+                          #     pitch=0,
+                          #     zoom=5,
+                          #     style='dark',
+                          # ),
                           height=800,
                           width=1500
                           )

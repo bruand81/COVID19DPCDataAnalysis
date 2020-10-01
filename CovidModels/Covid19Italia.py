@@ -32,52 +32,41 @@ class Covid19Italia:
         data_reg.fillna(0, inplace=True)
         self.__full_data = pd.merge(data_naz, data_reg, how='outer')
         regions = self.__full_data.codice_regione.unique()
-        self.__full_data[list(self.__renamed_columns.values())] = 0
-        self.__full_data[[str(col) + '_7dma' for col in list(self.__renamed_columns.values())]] = 0
-        self.__full_data[[str(col) + '_3dma' for col in list(self.__renamed_columns.values())]] = 0
-        self.__full_data[list(self.__percentage_renamed_columns.values())] = 0.0
+        # self.__full_data[list(self.__renamed_columns.values())] = 0
+        # self.__full_data[[str(col) + '_7dma' for col in list(self.__renamed_columns.values())]] = 0
+        # self.__full_data[[str(col) + '_3dma' for col in list(self.__renamed_columns.values())]] = 0
+        # self.__full_data[list(self.__percentage_renamed_columns.values())] = 0.0
         nuovi_positivi_7dma = pd.Series()
         nuovi_positivi_3dma = pd.Series()
+        increments = None
+        increments_percentage = None
+        increments_7dma = None
+        increments_3dma = None
         for region in regions:
             selected_rows = self.__full_data.codice_regione == region
-            increments = self.__full_data[selected_rows][self.__variation_columns].diff()
-
-            is_NaN = increments.isnull()
+            tmp = self.__full_data[selected_rows][self.__variation_columns].diff()
+            is_NaN = tmp.isnull()
             row_has_NaN = is_NaN.any(axis=1)
             rows_cleaned = self.__full_data[selected_rows][row_has_NaN]
-            increments[row_has_NaN] = rows_cleaned[self.__variation_columns]
-            increments.rename(columns=self.__renamed_columns, inplace=True)
+            tmp[row_has_NaN] = rows_cleaned[self.__variation_columns]
+            if increments is None:
+                increments = tmp
+                increments_percentage = tmp.pct_change(fill_method='ffill')
+                increments_7dma = tmp.rolling(window=7).mean()
+                increments_3dma = tmp.rolling(window=3).mean()
+            else:
+                increments.append(tmp)
+                increments_percentage.append(tmp.pct_change(fill_method='ffill'))
+                increments_7dma.append(tmp.rolling(window=7).mean())
+                increments_3dma.append(tmp.rolling(window=3).mean())
 
-            increments_percentage = increments.pct_change(fill_method='ffill')
-
-            nuovi_positivi_7dma = nuovi_positivi_7dma.append(self.__full_data[selected_rows].nuovi_positivi.
-                                                             rolling(window=7).mean())
-            self.__full_data.loc[selected_rows, 'nuovi_positivi_7dma'] = self.__full_data[selected_rows].rolling(
-                window=7).mean()
-            increments_7dma = increments.rolling(window=7).mean()
-            increments_7dma.columns = [str(col) + '_7dma' for col in increments_7dma.columns]
-
-            nuovi_positivi_3dma = nuovi_positivi_3dma.append(self.__full_data[selected_rows].nuovi_positivi.
-                                                             rolling(window=3).mean())
-            self.__full_data.loc[selected_rows, 'nuovi_positivi_3dma'] = self.__full_data[selected_rows].rolling(
-                window=3).mean()
-            increments_3dma = increments.rolling(window=3).mean()
-            increments_3dma.columns = [str(col) + '_3dma' for col in increments_3dma.columns]
-
-            for key in self.__renamed_columns:
-                column_indexer = self.__renamed_columns[key]
-                percentage_column_indexer = self.__percentage_renamed_columns[key]
-                self.__full_data.loc[selected_rows, column_indexer] = increments[column_indexer]
-                self.__full_data.loc[selected_rows, percentage_column_indexer] = increments_percentage[column_indexer]
-
-            for column in increments_7dma.columns:
-                self.__full_data.loc[selected_rows, column] = increments_7dma[column]
-
-            for column in increments_3dma.columns:
-                self.__full_data.loc[selected_rows, column] = increments_3dma[column]
-
+        increments.columns = ['variazione_' + str(col) for col in increments.columns]
+        increments_percentage.columns = ['percentuale_variazione_' + str(col) for col in increments_percentage.columns]
+        increments_3dma.columns = ['variazione_' + str(col) + '_3dma' for col in increments_3dma.columns]
+        increments_7dma.columns = ['variazione_' + str(col) + '_7dma' for col in increments_7dma.columns]
         nuovi_positivi_7dma.fillna(0, inplace=True)
         nuovi_positivi_3dma.fillna(0, inplace=True)
+        self.__full_data = pd.concat([self.__full_data, increments, increments_percentage, increments_3dma, increments_7dma], axis=1)
         self.__full_data['nuovi_positivi_7dma'] = nuovi_positivi_7dma.astype('int')
         self.__full_data['nuovi_positivi_3dma'] = nuovi_positivi_3dma.astype('int')
         self.__full_data['percentuale_positivi_tamponi'] = self.__full_data['totale_positivi'].divide(
@@ -101,23 +90,35 @@ class Covid19Italia:
         self.__dati_provinciali = pd.read_csv(self.__province)
         self.__dati_provinciali.fillna(0, inplace=True)
         counties = self.__dati_provinciali.codice_provincia.unique()
-        self.__dati_provinciali[list(self.__renamed_columns_province.values())] = 0.0
+        # self.__dati_provinciali[list(self.__renamed_columns_province.values())] = 0.0
+        increments = None
+        increments_percentage = None
+        increments_7dma = None
+        increments_3dma = None
         for county in counties:
             selected_rows = self.__dati_provinciali.codice_provincia == county
-            increments = self.__dati_provinciali[selected_rows][self.__variation_columns_province].diff()
-            is_NaN = increments.isnull()
+            tmp = self.__dati_provinciali[selected_rows][self.__variation_columns_province].diff()
+            is_NaN = tmp.isnull()
             row_has_NaN = is_NaN.any(axis=1)
             rows_cleaned = self.__dati_provinciali[selected_rows][row_has_NaN]
-            increments[row_has_NaN] = rows_cleaned[self.__variation_columns_province]
-            increments.rename(columns=self.__renamed_columns_province, inplace=True)
-            increments_percentage = increments.pct_change(fill_method='ffill')
-            # self.__full_data[selected_rows] =
-            for key in self.__renamed_columns_province:
-                column_indexer = self.__renamed_columns_province[key]
-                percentage_column_indexer = self.__percentage_renamed_columns_province[key]
-                self.__dati_provinciali.loc[selected_rows, column_indexer] = increments[column_indexer]
-                self.__dati_provinciali.loc[selected_rows, percentage_column_indexer] = increments_percentage[column_indexer]
+            tmp[row_has_NaN] = rows_cleaned[self.__variation_columns_province]
+            if increments is None:
+                increments = tmp
+                increments_percentage = tmp.pct_change(fill_method='ffill')
+                increments_7dma = tmp.rolling(window=7).mean()
+                increments_3dma = tmp.rolling(window=3).mean()
+            else:
+                increments.append(tmp)
+                increments_percentage.append(tmp.pct_change(fill_method='ffill'))
+                increments_7dma.append(tmp.rolling(window=7).mean())
+                increments_3dma.append(tmp.rolling(window=3).mean())
 
+        increments.columns = ['variazione_' + str(col) for col in increments.columns]
+        increments_percentage.columns = ['percentuale_variazione_' + str(col) for col in increments_percentage.columns]
+        increments_3dma.columns = ['variazione_' + str(col) + '_3dma' for col in increments_3dma.columns]
+        increments_7dma.columns = ['variazione_' + str(col) + '_7dma' for col in increments_7dma.columns]
+        self.__dati_provinciali = pd.concat(
+            [self.__dati_provinciali, increments, increments_percentage, increments_3dma, increments_7dma], axis=1)
         self.__dati_provinciali.replace([np.inf, -np.inf], np.nan, inplace=True)
         self.__dati_provinciali.fillna(0, inplace=True)
         self.__dati_provinciali['date'] = pd.to_datetime(self.__dati_provinciali['data'])
