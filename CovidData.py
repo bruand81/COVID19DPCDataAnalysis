@@ -17,7 +17,7 @@ class Covid19Italia:
     __percentage_renamed_columns_province = {x: f'percentuale_variazione_{x}' for x in __variation_columns_province}
     __full_data: pd.DataFrame = None
     __dati_provinciali = None
-    max_days=np.inf
+    max_days = np.inf
 
     def __init_full_data(self):
         print('Processamento dati riepilogativi nazionali e regionali')
@@ -33,28 +33,53 @@ class Covid19Italia:
         self.__full_data = pd.merge(data_naz, data_reg, how='outer')
         regions = self.__full_data.codice_regione.unique()
         self.__full_data[list(self.__renamed_columns.values())] = 0
+        self.__full_data[[str(col) + '_7dma' for col in list(self.__renamed_columns.values())]] = 0
+        self.__full_data[[str(col) + '_3dma' for col in list(self.__renamed_columns.values())]] = 0
         self.__full_data[list(self.__percentage_renamed_columns.values())] = 0.0
+        nuovi_positivi_7dma = pd.Series()
+        nuovi_positivi_3dma = pd.Series()
         for region in regions:
             selected_rows = self.__full_data.codice_regione == region
             increments = self.__full_data[selected_rows][self.__variation_columns].diff()
+
             is_NaN = increments.isnull()
             row_has_NaN = is_NaN.any(axis=1)
             rows_cleaned = self.__full_data[selected_rows][row_has_NaN]
             increments[row_has_NaN] = rows_cleaned[self.__variation_columns]
             increments.rename(columns=self.__renamed_columns, inplace=True)
+
             increments_percentage = increments.pct_change(fill_method='ffill')
-            # self.__full_data[selected_rows] =
+
+            nuovi_positivi_7dma = nuovi_positivi_7dma.append(self.__full_data[selected_rows].nuovi_positivi.
+                                                             rolling(window=7).mean())
+            self.__full_data.loc[selected_rows, 'nuovi_positivi_7dma'] = self.__full_data[selected_rows].rolling(
+                window=7).mean()
+            increments_7dma = increments.rolling(window=7).mean()
+            increments_7dma.columns = [str(col) + '_7dma' for col in increments_7dma.columns]
+
+            nuovi_positivi_3dma = nuovi_positivi_3dma.append(self.__full_data[selected_rows].nuovi_positivi.
+                                                             rolling(window=3).mean())
+            self.__full_data.loc[selected_rows, 'nuovi_positivi_3dma'] = self.__full_data[selected_rows].rolling(
+                window=3).mean()
+            increments_3dma = increments.rolling(window=3).mean()
+            increments_3dma.columns = [str(col) + '_3dma' for col in increments_3dma.columns]
+
             for key in self.__renamed_columns:
                 column_indexer = self.__renamed_columns[key]
                 percentage_column_indexer = self.__percentage_renamed_columns[key]
                 self.__full_data.loc[selected_rows, column_indexer] = increments[column_indexer]
                 self.__full_data.loc[selected_rows, percentage_column_indexer] = increments_percentage[column_indexer]
 
-        # for key in self.__renamed_columns:
-        #     variation_key = self.__renamed_columns[key]
-        #     new_column_names = f'percentuale_{variation_key}'
-        #     self.__full_data[new_column_names] = self.__full_data[key].divide(self.__full_data[variation_key])
+            for column in increments_7dma.columns:
+                self.__full_data.loc[selected_rows, column] = increments_7dma[column]
 
+            for column in increments_3dma.columns:
+                self.__full_data.loc[selected_rows, column] = increments_3dma[column]
+
+        nuovi_positivi_7dma.fillna(0, inplace=True)
+        nuovi_positivi_3dma.fillna(0, inplace=True)
+        self.__full_data['nuovi_positivi_7dma'] = nuovi_positivi_7dma.astype('int')
+        self.__full_data['nuovi_positivi_3dma'] = nuovi_positivi_3dma.astype('int')
         self.__full_data['percentuale_positivi_tamponi'] = self.__full_data['totale_positivi'].divide(
             self.__full_data['tamponi'])
         self.__full_data['percentuale_positivi_tamponi_giornaliera'] = self.__full_data['nuovi_positivi'].divide(
@@ -63,10 +88,13 @@ class Covid19Italia:
             self.__full_data['casi_testati'])
         self.__full_data['percentuale_positivi_casi_giornaliera'] = self.__full_data['nuovi_positivi'].divide(
             self.__full_data['variazione_casi_testati'])
+        self.__full_data['CFR'] = self.__full_data['deceduti'].divide(
+            self.__full_data['totale_casi'])
         self.__full_data.replace([np.inf, -np.inf], np.nan, inplace=True)
         self.__full_data.fillna(0, inplace=True)
         self.__full_data['date'] = pd.to_datetime(self.__full_data['data'])
         self.__full_data['formatted_date'] = self.__full_data.date.dt.strftime('%d/%m/%Y')
+        self.__full_data['CFR_str'] = self.__full_data['CFR'].apply(lambda x: f'{x:.2%}')
 
     def __init_province(self):
         print('Processamento dati riepilogativi provinciali')
@@ -89,11 +117,6 @@ class Covid19Italia:
                 percentage_column_indexer = self.__percentage_renamed_columns_province[key]
                 self.__dati_provinciali.loc[selected_rows, column_indexer] = increments[column_indexer]
                 self.__dati_provinciali.loc[selected_rows, percentage_column_indexer] = increments_percentage[column_indexer]
-
-            # for key in self.__renamed_columns_province:
-            #     variation_key = self.__renamed_columns_province[key]
-            #     new_column_names = f'percentuale_{variation_key}'
-            #     self.__dati_provinciali[new_column_names] = self.__dati_provinciali[key].divide(self.__dati_provinciali[variation_key])
 
             self.__dati_provinciali.replace([np.inf, -np.inf], np.nan, inplace=True)
             self.__dati_provinciali.fillna(0, inplace=True)
