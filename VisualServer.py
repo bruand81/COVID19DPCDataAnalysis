@@ -202,8 +202,16 @@ class VisualServer:
 
         return data_table
 
-    def generate_table_from_data_province(self) -> dt.DataTable:
+    def denerate_table_from_data_province(self) -> dt.DataTable:
         data = self.data_manager.dati_provinciali_latest.sort_values(by=['codice_regione', 'codice_provincia'])
+        return self.generate_table_from_data_province(data)
+
+    def denerate_table_from_data_province_in_region(self, region: int) -> dt.DataTable:
+        data = self.data_manager.dati_provinciali_latest[
+            self.data_manager.dati_provinciali_latest.codice_regione == region].sort_values(by=['codice_provincia'])
+        return self.generate_table_from_data_province(data)
+
+    def generate_table_from_data_province(self, data: pd.DataFrame) -> dt.DataTable:
         data_table = dt.DataTable(
             id='rdtp',
             columns=(
@@ -219,8 +227,8 @@ class VisualServer:
             ),
             data=data[[
                 # 'formatted_date',
-                'denominazione_regione',
                 'denominazione_provincia',
+                'denominazione_regione',
                 'totale_casi',
                 'variazione_totale_casi',
                 'percentuale_variazione_totale_casi',
@@ -228,7 +236,7 @@ class VisualServer:
             editable=False,
             style_table={
                 'height': 'auto',
-                'minWidth': '500px', 'maxWidth': '90%',
+                'maxWidth': '90%',
                 'whiteSpace': 'normal',
                 'overflowX': 'scroll',
                 'maxHeight': self._default_height,
@@ -241,25 +249,23 @@ class VisualServer:
                     'backgroundColor': 'rgb(248, 248, 248)'
                 }
             ],
-            # style_cell_conditional=[
-            #     {'if': {'column_id': c},
-            #      'width': '10%',
-            #      'minWidth': '50px',
-            #      'textAlign': 'left'} for c in [
-            #         'denominazione_provincia'
-            #         'denominazione_regione',
-            #         # 'formatted_date',
-            #         'totale_casi',
-            #         'isolamento_domiciliare',
-            #         'variazione_totale_casi',
-            #         'percentuale_variazione_totale_casi',
-            #     ]
-            # ],
+            style_cell_conditional=[
+                {'if': {'column_id': c},
+                 'width': '10%',
+                 'minWidth': '20px',
+                 'textAlign': 'left'} for c in [
+                    'denominazione_provincia',
+                    'denominazione_regione',
+                    'totale_casi',
+                    'variazione_totale_casi',
+                    'percentuale_variazione_totale_casi',
+                ]
+            ],
             style_header={
                 'backgroundColor': 'rgb(230, 230, 230)',
                 'fontWeight': 'bold'
             },
-            # fixed_columns={'headers': True, 'data': 2},
+            # fixed_columns={'headers': True, 'data': 1},
             # fixed_rows={'headers': True, 'data': 0},
             filter_action="native",
             sort_action="native",
@@ -496,18 +502,18 @@ class VisualServer:
                     self.data_manager.dati_regionali_latest.codice_regione == self.selected_region].denominazione_regione.iloc[
                     0]]),
             html.Hr(),
-            self.immagine_riepilogo(self.data_manager.dati_regionali[
-                                        self.data_manager.dati_regionali.codice_regione == self.selected_region]),
             self.dati_essenziali(self.data_manager.dati_regionali_latest[
                                      self.data_manager.dati_regionali_latest.codice_regione == self.selected_region],
                                  'valori_essenziali_regione'),
+            self.immagine_riepilogo(self.data_manager.dati_regionali[
+                                        self.data_manager.dati_regionali.codice_regione == self.selected_region]),
             html.Hr(),
             html.H2(children='Situazione province'),
             html.Hr(),
             html.Div(id="riepilogo_table_province", children=[
                 html.H3(children='Tabella riepilogativa delle province'),
                 html.Hr(),
-                self.generate_table_from_data_province()
+                self.denerate_table_from_data_province_in_region(self.selected_region)
             ]),
         ]
         )
