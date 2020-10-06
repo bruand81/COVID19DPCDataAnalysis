@@ -202,11 +202,11 @@ class VisualServer:
 
         return data_table
 
-    def denerate_table_from_data_province(self) -> dt.DataTable:
+    def generate_data_province_table(self) -> dt.DataTable:
         data = self.data_manager.dati_provinciali_latest.sort_values(by=['codice_regione', 'codice_provincia'])
         return self.generate_table_from_data_province(data)
 
-    def denerate_table_from_data_province_in_region(self, region: int) -> dt.DataTable:
+    def generate_data_province_in_region_table(self, region: int) -> dt.DataTable:
         data = self.data_manager.dati_provinciali_latest[
             self.data_manager.dati_provinciali_latest.codice_regione == region].sort_values(by=['codice_provincia'])
         return self.generate_table_from_data_province(data)
@@ -480,6 +480,42 @@ class VisualServer:
             dcc.Graph(figure=riepilogo)
         ])
 
+    def immagine_riepilogo_province(self, data: pd.DataFrame) -> html.Div:
+        nome = data.denominazione_regione.iloc[0]
+        codice = data.codice_regione.iloc[0]
+        codici_province = data.codice_provincia.unique()
+
+        i = 0
+        riepilogo = go.Figure()
+        # for codice_provincia in codici_province:
+        #     data_provincia = data[data.codice_provincia == codice_provincia]
+        #     riepilogo.add_trace(go.Scatter(x=data_provincia.date, y=data_provincia.variazione_totale_casi,
+        #                                    text=data_provincia.variazione_totale_casi,
+        #                                    name=f'Casi {data_provincia.denominazione_provincia.iloc[0]}',
+        #                                    line_color=self._colors[i]))
+        #     i += 1
+        riepilogo = px.scatter(data, x="date", y="variazione_totale_casi", color="denominazione_provincia",
+                               hover_data=['variazione_totale_casi', 'totale_casi'],
+                               hover_name="denominazione_provincia",
+                               labels={'variazione_totale_casi': 'Nuovi casi', 'totale_casi': 'Totale casi'},
+                               color_discrete_sequence=px.colors.qualitative.Light24,
+                               trendline='lowess')
+        riepilogo.update_layout(
+            hovermode=self._hovermode,
+            height=self._default_height
+        )
+        riepilogo.update_traces(
+            mode='lines+markers',
+            textposition="bottom center",
+            # hovertemplate="%{y:n}"
+        )
+
+        return html.Div(id=f'riepilogo_provincia_{codice}', children=[
+            html.H3(children=f'Andamento provincie {nome}'),
+            html.Hr(),
+            dcc.Graph(figure=riepilogo)
+        ])
+
     def serve_layout(self) -> html.Div:
         return html.Div(children=[
             html.H1(children=self.data_manager.latest_update_date.strftime(
@@ -505,6 +541,7 @@ class VisualServer:
             self.dati_essenziali(self.data_manager.dati_regionali_latest[
                                      self.data_manager.dati_regionali_latest.codice_regione == self.selected_region],
                                  'valori_essenziali_regione'),
+            html.Hr(),
             self.immagine_riepilogo(self.data_manager.dati_regionali[
                                         self.data_manager.dati_regionali.codice_regione == self.selected_region]),
             html.Hr(),
@@ -513,8 +550,9 @@ class VisualServer:
             html.Div(id="riepilogo_table_province", children=[
                 html.H3(children='Tabella riepilogativa delle province'),
                 html.Hr(),
-                self.denerate_table_from_data_province_in_region(self.selected_region)
+                self.generate_data_province_in_region_table(self.selected_region)
             ]),
+            self.immagine_riepilogo_province(self.data_manager.dati_province_in_regione(self.selected_region))
         ]
         )
 

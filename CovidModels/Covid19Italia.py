@@ -202,3 +202,9 @@ class Covid19Italia:
     def latest_update_date(self) -> datetime:
         data_naz = pd.read_csv(self.__nazionale_latest)
         return pd.to_datetime(data_naz.data).max()
+
+    def dati_province_in_regione(self, codice_regione: int) -> pd.DataFrame:
+        return self.dati_provinciali[self.dati_provinciali.codice_regione == codice_regione]
+
+    def dati_province_in_regione_latest(self, codice_regione: int) -> pd.DataFrame:
+        return self.dati_provinciali_latest[self.dati_provinciali_latest.codice_regione == codice_regione]
