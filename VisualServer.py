@@ -20,7 +20,8 @@ class VisualServer:
     _default_height = 800
     _hovermode = "x"
     _mapbox_access_token = open(".mapbox_token").read()
-    _colors = px.colors.cyclical.HSV
+    # _colors = px.colors.cyclical.HSV
+    _colors = px.colors.qualitative.Light24
     _geojson: orjson = None
     _report_axis = {'nuovi_positivi': {'title': 'Nuovi positivi', 'scale': 1},
                     'variazione_deceduti': {'title': 'Decessi', 'scale': 1},
@@ -51,6 +52,42 @@ class VisualServer:
 
     def generate_table_from_data(self) -> dt.DataTable:
         data = self.data_manager.dati_completi_latest
+        dtf = data[[
+            # 'formatted_date',
+            'ricoverati_con_sintomi',
+            'terapia_intensiva',
+            'totale_ospedalizzati',
+            'isolamento_domiciliare',
+            'totale_positivi',
+            'variazione_totale_positivi',
+            'nuovi_positivi',
+            'nuovi_positivi_7dma',
+            'nuovi_positivi_3dma',
+            'dimessi_guariti',
+            'deceduti',
+            'CFR',
+            'casi_da_sospetto_diagnostico',
+            'casi_da_screening',
+            'totale_casi',
+            'tamponi',
+            'casi_testati',
+            'denominazione_regione',
+            'variazione_tamponi',
+            'variazione_casi_testati',
+            'variazione_terapia_intensiva',
+            'variazione_ricoverati_con_sintomi',
+            'variazione_deceduti',
+            'variazione_dimessi_guariti',
+            'variazione_isolamento_domiciliare',
+            'variazione_casi_da_screening',
+            'variazione_casi_da_sospetto_diagnostico',
+            'percentuale_positivi_tamponi',
+            'percentuale_positivi_tamponi_giornaliera',
+            'percentuale_positivi_casi',
+            'percentuale_positivi_casi_giornaliera',
+            'incidenza',
+            'incidenza_7d',
+        ]]
         data_table = dt.DataTable(
             id='rdt',
             columns=(
@@ -93,49 +130,18 @@ class VisualServer:
                      'format': FormatTemplate.percentage(2, rounded=False)},
                     {'id': 'percentuale_positivi_casi', 'name': 'Positivi/Persone', 'type': 'numeric',
                      'format': FormatTemplate.percentage(2, rounded=False)},
+                    {'id': 'incidenza', 'name': 'Incidenza', 'type': 'numeric'},
+                    {'id': 'incidenza_7d', 'name': 'Incidenza a 7 gg', 'type': 'numeric'},
                 ]
             ),
-            data=data[[
-                # 'formatted_date',
-                'ricoverati_con_sintomi',
-                'terapia_intensiva',
-                'totale_ospedalizzati',
-                'isolamento_domiciliare',
-                'totale_positivi',
-                'variazione_totale_positivi',
-                'nuovi_positivi',
-                'nuovi_positivi_7dma',
-                'nuovi_positivi_3dma',
-                'dimessi_guariti',
-                'deceduti',
-                'CFR',
-                'casi_da_sospetto_diagnostico',
-                'casi_da_screening',
-                'totale_casi',
-                'tamponi',
-                'casi_testati',
-                'denominazione_regione',
-                'variazione_tamponi',
-                'variazione_casi_testati',
-                'variazione_terapia_intensiva',
-                'variazione_ricoverati_con_sintomi',
-                'variazione_deceduti',
-                'variazione_dimessi_guariti',
-                'variazione_isolamento_domiciliare',
-                'variazione_casi_da_screening',
-                'variazione_casi_da_sospetto_diagnostico',
-                'percentuale_positivi_tamponi',
-                'percentuale_positivi_tamponi_giornaliera',
-                'percentuale_positivi_casi',
-                'percentuale_positivi_casi_giornaliera',
-            ]].to_dict(orient='records'),
+            data=dtf.to_dict(orient='records'),
             editable=False,
             style_table={
-                'height': 'auto',
-                'minWidth': '500px', 'maxWidth': '90%',
+                # 'height': 'auto',
+                'minWidth': '500px', 'maxWidth': '99%',
                 'whiteSpace': 'normal',
                 'overflowX': 'scroll',
-                'maxHeight': self._default_height,
+                # 'maxHeight': self._default_height,
                 'overflowY': 'scroll',
                 'textAlign': 'left'
             },
@@ -145,55 +151,29 @@ class VisualServer:
                     'backgroundColor': 'rgb(248, 248, 248)'
                 }
             ],
-            # style_cell_conditional=[
-            #                            {'if': {'column_id': 'denominazione_regione'},
-            #                             'width': '60%',
-            #                             'minWidth': '100px',
-            #                             'textAlign': 'left',
-            #                             }
-            #                        ] + [
-            #                            {'if': {'column_id': c},
-            #                             'width': '10%',
-            #                             'minWidth': '50px',
-            #                             'textAlign': 'left'} for c in [
-            #                                 # 'formatted_date',
-            #                                 'ricoverati_con_sintomi',
-            #                                 'terapia_intensiva',
-            #                                 'totale_ospedalizzati',
-            #                                 'isolamento_domiciliare',
-            #                                 'totale_positivi',
-            #                                 'variazione_totale_positivi',
-            #                                 'nuovi_positivi',
-            #                                 'nuovi_positivi_7dma',
-            #                                 'nuovi_positivi_3dma',
-            #                                 'dimessi_guariti',
-            #                                 'deceduti',
-            #                                 'CFR',
-            #                                 'casi_da_sospetto_diagnostico',
-            #                                 'casi_da_screening',
-            #                                 'totale_casi',
-            #                                 'tamponi',
-            #                                 'casi_testati',
-            #                                 'variazione_tamponi',
-            #                                 'variazione_casi_testati',
-            #                                 'variazione_terapia_intensiva',
-            #                                 'variazione_ricoverati_con_sintomi',
-            #                                 'variazione_deceduti',
-            #                                 'variazione_dimessi_guariti',
-            #                                 'variazione_isolamento_domiciliare',
-            #                                 'variazione_casi_da_screening',
-            #                                 'variazione_casi_da_sospetto_diagnostico',
-            #                                 'percentuale_positivi_tamponi',
-            #                                 'percentuale_positivi_tamponi_giornaliera',
-            #                                 'percentuale_positivi_casi',
-            #                                 'percentuale_positivi_casi_giornaliera',
-            #                             ]
-            #                        ],
+            style_cell={
+                'overflow': 'hidden',
+                'textOverflow': 'ellipsis',
+                'maxWidth': 0,
+            },
+            style_cell_conditional=[
+                {'if': {'column_id': 'denominazione_regione'},
+                 'width': '10%'},
+            ],
+            tooltip_data=[
+                {
+                    column: {'value': str(value), 'type': 'markdown'}
+                    for column, value in row.items()
+                } for row in dtf.to_dict(orient='records')
+            ],
             style_header={
+                'whiteSpace': 'normal',
+                'height': 'auto',
+                'lineHeight': '15px',
                 'backgroundColor': 'rgb(230, 230, 230)',
                 'fontWeight': 'bold'
             },
-            fixed_columns={'headers': True, 'data': 1},
+            # fixed_columns={'headers': True, 'data': 1},
             # fixed_rows={'headers': True, 'data': 0},
             filter_action="native",
             sort_action="native",
@@ -212,6 +192,16 @@ class VisualServer:
         return self.generate_table_from_data_province(data)
 
     def generate_table_from_data_province(self, data: pd.DataFrame) -> dt.DataTable:
+        dtp = data[[
+            # 'formatted_date',
+            'denominazione_provincia',
+            'denominazione_regione',
+            'totale_casi',
+            'variazione_totale_casi',
+            'percentuale_variazione_totale_casi',
+            'incidenza',
+            'incidenza_7d',
+        ]]
         data_table = dt.DataTable(
             id='rdtp',
             columns=(
@@ -223,16 +213,11 @@ class VisualServer:
                     {'id': 'variazione_totale_casi', 'name': 'Var. Casi', 'type': 'numeric'},
                     {'id': 'percentuale_variazione_totale_casi', 'name': 'Perc. incremento', 'type': 'numeric',
                      'format': FormatTemplate.percentage(2, rounded=False)},
+                    {'id': 'incidenza', 'name': 'Incidenza', 'type': 'numeric'},
+                    {'id': 'incidenza_7d', 'name': 'Incidenza 7 gg', 'type': 'numeric'},
                 ]
             ),
-            data=data[[
-                # 'formatted_date',
-                'denominazione_provincia',
-                'denominazione_regione',
-                'totale_casi',
-                'variazione_totale_casi',
-                'percentuale_variazione_totale_casi',
-            ]].to_dict(orient='records'),
+            data=dtp.to_dict(orient='records'),
             editable=False,
             style_table={
                 'height': 'auto',
@@ -249,6 +234,17 @@ class VisualServer:
                     'backgroundColor': 'rgb(248, 248, 248)'
                 }
             ],
+            style_cell={
+                'overflow': 'hidden',
+                'textOverflow': 'ellipsis',
+                'maxWidth': 0,
+            },
+            tooltip_data=[
+                {
+                    column: {'value': str(value), 'type': 'markdown'}
+                    for column, value in row.items()
+                } for row in dtp.to_dict(orient='records')
+            ],
             style_cell_conditional=[
                 {'if': {'column_id': c},
                  'width': '10%',
@@ -259,9 +255,13 @@ class VisualServer:
                     'totale_casi',
                     'variazione_totale_casi',
                     'percentuale_variazione_totale_casi',
+                    'incidenza,'
                 ]
             ],
             style_header={
+                'whiteSpace': 'normal',
+                'height': 'auto',
+                'lineHeight': '15px',
                 'backgroundColor': 'rgb(230, 230, 230)',
                 'fontWeight': 'bold'
             },
@@ -461,6 +461,8 @@ class VisualServer:
             riepilogo.add_trace(go.Scatter(x=data.date, y=data[key] / self._report_axis[key]['scale'],
                                            text=data[key],
                                            name=self._report_axis[key]['title'],
+                                           hovertext=data[key],
+                                           hovertemplate="<b>" + self._report_axis[key]['title'] + "</b> %{text:n}",
                                            line_color=self._colors[i]))
             i += 1
 
@@ -471,7 +473,7 @@ class VisualServer:
         riepilogo.update_traces(
             mode='lines+markers',
             textposition="bottom center",
-            hovertemplate="%{y:n}"
+            # hovertemplate="<b>%{name}: %{text:n}</b>"
         )
 
         return html.Div(id=f'riepilogo_{codice}', children=[
@@ -483,23 +485,14 @@ class VisualServer:
     def immagine_riepilogo_province(self, data: pd.DataFrame) -> html.Div:
         nome = data.denominazione_regione.iloc[0]
         codice = data.codice_regione.iloc[0]
-        codici_province = data.codice_provincia.unique()
 
-        i = 0
-        riepilogo = go.Figure()
-        # for codice_provincia in codici_province:
-        #     data_provincia = data[data.codice_provincia == codice_provincia]
-        #     riepilogo.add_trace(go.Scatter(x=data_provincia.date, y=data_provincia.variazione_totale_casi,
-        #                                    text=data_provincia.variazione_totale_casi,
-        #                                    name=f'Casi {data_provincia.denominazione_provincia.iloc[0]}',
-        #                                    line_color=self._colors[i]))
-        #     i += 1
         riepilogo = px.scatter(data, x="date", y="variazione_totale_casi", color="denominazione_provincia",
                                hover_data=['variazione_totale_casi', 'totale_casi'],
                                hover_name="denominazione_provincia",
                                labels={'variazione_totale_casi': 'Nuovi casi', 'totale_casi': 'Totale casi'},
                                color_discrete_sequence=px.colors.qualitative.Light24,
-                               trendline='lowess')
+                               # trendline='lowess'
+                               )
         riepilogo.update_layout(
             hovermode=self._hovermode,
             height=self._default_height
@@ -564,5 +557,7 @@ class VisualServer:
 
         app = dash.Dash()
         app.layout = self.serve_layout()
+        app.title = self.data_manager.latest_update_date.strftime(
+            "Aggiornamenti situazione COVID19 Italia a %A %d %B %Y")
 
         app.run_server(debug=True)
