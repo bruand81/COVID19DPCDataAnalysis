@@ -31,6 +31,8 @@ class VisualServer:
                     'variazione_tamponi': {'title': 'Tamponi', 'scale': 100},
                     'nuovi_positivi_7dma': {'title': 'Nuovi positivi (7DMA)', 'scale': 1},
                     'nuovi_positivi_3dma': {'title': 'Nuovi positivi (3DMA)', 'scale': 1},
+                    'incidenza_7d': {'title': 'Incidenza a 7gg /10000 abitanti', 'scale': 1},
+                    'incidenza': {'title': 'Incidenza /10000 abitanti', 'scale': 1},
                     }
 
     def __init__(self):
@@ -130,8 +132,8 @@ class VisualServer:
                      'format': FormatTemplate.percentage(2, rounded=False)},
                     {'id': 'percentuale_positivi_casi', 'name': 'Positivi/Persone', 'type': 'numeric',
                      'format': FormatTemplate.percentage(2, rounded=False)},
-                    {'id': 'incidenza', 'name': 'Incidenza', 'type': 'numeric'},
-                    {'id': 'incidenza_7d', 'name': 'Incidenza a 7 gg', 'type': 'numeric'},
+                    {'id': 'incidenza', 'name': 'Incidenza /10000 abitanti', 'type': 'numeric'},
+                    {'id': 'incidenza_7d', 'name': 'Incidenza a 7gg /10000 abitanti', 'type': 'numeric'},
                 ]
             ),
             data=dtf.to_dict(orient='records'),
@@ -213,8 +215,8 @@ class VisualServer:
                     {'id': 'variazione_totale_casi', 'name': 'Var. Casi', 'type': 'numeric'},
                     {'id': 'percentuale_variazione_totale_casi', 'name': 'Perc. incremento', 'type': 'numeric',
                      'format': FormatTemplate.percentage(2, rounded=False)},
-                    {'id': 'incidenza', 'name': 'Incidenza', 'type': 'numeric'},
-                    {'id': 'incidenza_7d', 'name': 'Incidenza 7 gg', 'type': 'numeric'},
+                    {'id': 'incidenza', 'name': 'Incidenza /10000 abitanti', 'type': 'numeric'},
+                    {'id': 'incidenza_7d', 'name': 'Incidenza a 7gg /10000 abitanti', 'type': 'numeric'},
                 ]
             ),
             data=dtp.to_dict(orient='records'),
@@ -290,7 +292,9 @@ class VisualServer:
                           children=f'{data.percentuale_positivi_casi_giornaliera.iloc[0]:.2%}'),
                 f' ({data.nuovi_positivi.iloc[0]} su {data.variazione_casi_testati.iloc[0]:.0f})',
                 ' - CFR: ',
-                f'{data.CFR.iloc[0]:.2%}'
+                f'{data.CFR.iloc[0]:.2%}',
+                ' - Incidenza a 7 giorni:',
+                f'{data.incidenza_7d.iloc[0]}',
             ]),
         ])
 
@@ -357,7 +361,7 @@ class VisualServer:
     @property
     def geojson(self) -> orjson:
         if self._geojson is None:
-            print('Elaborazione dati geojson')
+            # print('Elaborazione dati geojson')
             with open(
                     'files/regioni-con-trento-bolzano.geojson') as response:
                 geojson = orjson.loads(response.read())
@@ -411,7 +415,8 @@ class VisualServer:
                                                'terapia_intensiva',
                                                'CFR_str',
                                                'nuovi_positivi_7dma',
-                                               'nuovi_positivi_3dma'],
+                                               'nuovi_positivi_3dma',
+                                               'incidenza_7d'],
                                    labels={
                                        'denominazione_regione': 'Denominazione regione',
                                        'totale_casi': 'Totale casi',
@@ -422,23 +427,13 @@ class VisualServer:
                                        'CFR_str': 'Case Fatality Rate',
                                        'nuovi_positivi_7dma': 'Nuovi positivi (7DMA)',
                                        'nuovi_positivi_3dma': 'Nuovi positivi (3DMA)',
+                                       'incidenza_7d': 'Incidenza a 7gg /10000 abitanti',
                                    })
         fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
                           title='Situazione nelle regioni',
                           autosize=True,
                           hovermode='closest',
                           showlegend=True,
-                          # mapbox=dict(
-                          #     accesstoken=self._mapbox_access_token,
-                          #     bearing=0,
-                          #     center=dict(
-                          #         lat=42,
-                          #         lon=12
-                          #     ),
-                          #     pitch=0,
-                          #     zoom=5,
-                          #     style='dark',
-                          # ),
                           height=800,
                           width=1500
                           )
@@ -544,6 +539,7 @@ class VisualServer:
                 html.H3(children='Tabella riepilogativa delle province'),
                 html.Hr(),
                 self.generate_data_province_in_region_table(self.selected_region)
+                # self.generate_table_from_data_province(self.data_manager.dati_provinciali_latest)
             ]),
             self.immagine_riepilogo_province(self.data_manager.dati_province_in_regione(self.selected_region))
         ]

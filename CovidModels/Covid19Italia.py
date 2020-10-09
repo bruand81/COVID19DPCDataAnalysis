@@ -71,10 +71,6 @@ class Covid19Italia:
             nuovi_positivi_7dsum = nuovi_positivi_7dsum.append(self.__full_data[selected_rows].nuovi_positivi.
                                                                rolling(window=7).sum())
 
-        # increments = increments.drop(columns=increments.columns[0])
-        # increments_percentage = increments_percentage.drop(columns=increments_percentage.columns[0])
-        # increments_3dma = increments_3dma.drop(columns=increments_3dma.columns[0])
-        # increments_7dma = increments_7dma.drop(columns=increments_7dma.columns[0])
         increments.columns = ['variazione_' + str(col) for col in increments.columns]
         increments_percentage.columns = ['percentuale_variazione_' + str(col) for col in increments_percentage.columns]
         increments_3dma.columns = ['variazione_' + str(col) + '_3dma' for col in increments_3dma.columns]
@@ -86,7 +82,8 @@ class Covid19Italia:
                               axis=1)
 
         self.__full_data = full_data
-        self.__full_data['incidenza_7d'] = (nuovi_positivi_7dsum / (self.__full_data['popolazione'] / 100000)).round(decimals=0).astype('int')
+        self.__full_data['incidenza_7d'] = (nuovi_positivi_7dsum / (self.__full_data['popolazione'] / 100000)).round(
+            decimals=2)
         self.__full_data['nuovi_positivi_7dma'] = nuovi_positivi_7dma.astype('int')
         self.__full_data['nuovi_positivi_3dma'] = nuovi_positivi_3dma.astype('int')
 
@@ -152,8 +149,8 @@ class Covid19Italia:
         incidenza_7d = (nuovi_positivi_7dsum / (self.__dati_provinciali['popolazione'] / 100000))
         incidenza_7d.replace([np.inf, -np.inf], np.nan, inplace=True)
         incidenza_7d.fillna(0, inplace=True)
-        incidenza_7d = incidenza_7d.round(decimals=0)
-        self.__dati_provinciali['incidenza_7d'] = incidenza_7d.astype('int')
+        incidenza_7d = incidenza_7d.round(decimals=2)
+        self.__dati_provinciali['incidenza_7d'] = incidenza_7d
         self.__dati_provinciali.replace([np.inf, -np.inf], np.nan, inplace=True)
         self.__dati_provinciali.fillna(0, inplace=True)
         self.__dati_provinciali['date'] = pd.to_datetime(self.__dati_provinciali['data'])
