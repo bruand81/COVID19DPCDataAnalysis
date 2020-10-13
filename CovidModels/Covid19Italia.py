@@ -146,7 +146,7 @@ class Covid19Italia:
 
         self.__dati_provinciali = pd.concat(
             [self.__dati_provinciali, increments, increments_percentage, increments_3dma, increments_7dma], axis=1)
-        incidenza_7d = (nuovi_positivi_7dsum / (self.__dati_provinciali['popolazione'] / 100000))
+        incidenza_7d = nuovi_positivi_7dsum.div((self.__dati_provinciali['popolazione'] / 100000))
         incidenza_7d.replace([np.inf, -np.inf], np.nan, inplace=True)
         incidenza_7d.fillna(0, inplace=True)
         incidenza_7d = incidenza_7d.round(decimals=2)
