@@ -277,12 +277,13 @@ class VisualServer:
         return data_table
 
     def dati_essenziali(self, data: pd.DataFrame, id: str) -> html.Div:
+        if data.empty:
+            return html.Div()
         return html.Div(id=id, children=[
             html.H3(children=[
                 'Percentuale positivi/tamponi: ',
                 html.Span(style={'color': 'red' if (
-                        data.percentuale_positivi_tamponi_giornaliera.iloc[
-                            0] >= 0.03) else 'green'},
+                        data.percentuale_positivi_tamponi_giornaliera.iloc[0] >= 0.03) else 'green'},
                           children=f'{data.percentuale_positivi_tamponi_giornaliera.iloc[0]:.2%}'),
                 f' ({data.nuovi_positivi.iloc[0]} su {data.variazione_tamponi.iloc[0]:.0f})',
                 ' - Percentuale positivi/persone testate: ',
@@ -294,20 +295,20 @@ class VisualServer:
                 html.Br(),
                 'Decessi: ',
                 html.Span(style={'color': 'blue'},
-                          children=f'{data.variazione_deceduti.iloc[0]}'),
+                          children=f'{data.variazione_deceduti.iloc[0]:.0f}'),
                 ' - Terapie intensive: ',
                 html.Span(style={'color': 'blue'},
-                          children=f'{data.variazione_terapia_intensiva.iloc[0]}'),
+                          children=f'{data.variazione_terapia_intensiva.iloc[0]:.0f}'),
                 ' - Ricoverati: ',
                 html.Span(style={'color': 'blue'},
-                          children=f'{data.variazione_ricoverati_con_sintomi.iloc[0]}'),
+                          children=f'{data.variazione_ricoverati_con_sintomi.iloc[0]:.0f}'),
                 html.Br(),
                 'CFR: ',
                 html.Span(style={'color': 'blue'},
                           children=f'{data.CFR.iloc[0]:.2%}'),
                 ' - Incidenza a 7 giorni: ',
                 html.Span(style={'color': 'blue'},
-                          children=f'{data.incidenza_7d.iloc[0]}'),
+                          children=f'{data.incidenza_7d.iloc[0]:.0f}'),
                 ' positivi/100.000 abitanti'
             ]),
         ])

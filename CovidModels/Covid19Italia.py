@@ -39,8 +39,9 @@ class Covid19Italia:
         data_reg.fillna(0, inplace=True)
 
         self.__full_data = pd.merge(data_naz, data_reg, how='outer')
-        self.__full_data = self.__full_data.merge(self.popolazione_istat[['codice_regione', 'popolazione']],
-                                                  how='inner', on='codice_regione')
+        self.__full_data = self.__full_data.merge(self.popolazione_istat_regioni_italia[['codice_regione', 'popolazione']],
+                                                  how='outer', on='codice_regione')
+        # self.__full_data['popolazione'].fillna(0, inplace=True)
         self.__full_data['incidenza'] = (self.__full_data['totale_casi'] / (self.__full_data['popolazione'] / 100000)).round(decimals=0).astype('int')
 
         regions = self.__full_data.codice_regione.unique()
@@ -110,9 +111,13 @@ class Covid19Italia:
         self.__dati_provinciali = pd.read_csv(self.__province)
         self.__dati_provinciali.fillna(0, inplace=True)
         self.__dati_provinciali = self.__dati_provinciali.merge(
-            self.popolazione_istat[['codice_provincia', 'popolazione']], how='inner', on='codice_provincia')
+            self.popolazione_istat_provincie[['codice_provincia', 'popolazione']], how='outer', on='codice_provincia')
+        # self.__dati_provinciali['popolazione'].fillna(0, inplace=True)
         self.__dati_provinciali['incidenza'] = (self.__dati_provinciali['totale_casi'] / (
-                    self.__dati_provinciali['popolazione'] / 100000)).round(decimals=0).astype('int')
+                    self.__dati_provinciali['popolazione'] / 100000))
+
+        self.__dati_provinciali['incidenza'].fillna(0, inplace=True)
+        self.__dati_provinciali['incidenza'] = self.__dati_provinciali['incidenza'].round(decimals=0).astype('int')
 
         counties = self.__dati_provinciali.codice_provincia.unique()
 
@@ -167,6 +172,14 @@ class Covid19Italia:
         return self.__istat
 
     @property
+    def popolazione_istat_regioni_italia(self) -> pd.DataFrame:
+        return self.popolazione_istat[self.popolazione_istat.codice_regione >= 0]
+
+    @property
+    def popolazione_istat_provincie(self) -> pd.DataFrame:
+        return self.popolazione_istat[self.popolazione_istat.codice_provincia > 0]
+
+    @property
     def dati_nazionali(self) -> pd.DataFrame:
         if self.__full_data is None:
             self.__init_full_data()
@@ -204,35 +217,39 @@ class Covid19Italia:
 
     @property
     def dati_nazionali_latest(self) -> pd.DataFrame:
-        old_max_days = self.max_days
-        self.max_days = 1
-        data = self.dati_nazionali
-        self.max_days = old_max_days
-        return data
+        # old_max_days = self.max_days
+        # self.max_days = 1
+        # data = self.dati_nazionali
+        # self.max_days = old_max_days
+        # return data
+        return self.dati_nazionali[self.dati_nazionali.date == self.dati_nazionali.date.max()]
 
     @property
     def dati_regionali_latest(self) -> pd.DataFrame:
-        old_max_days = self.max_days
-        self.max_days = 1
-        data = self.dati_regionali
-        self.max_days = old_max_days
-        return data
+        # old_max_days = self.max_days
+        # self.max_days = 1
+        # data = self.dati_regionali
+        # self.max_days = old_max_days
+        # return data
+        return self.dati_regionali[self.dati_regionali.date == self.dati_regionali.date.max()]
 
     @property
     def dati_completi_latest(self) -> pd.DataFrame:
-        old_max_days = self.max_days
-        self.max_days = 1
-        data = self.dati_completi
-        self.max_days = old_max_days
-        return data
+        # old_max_days = self.max_days
+        # self.max_days = 1
+        # data = self.v
+        # self.max_days = old_max_days
+        # return data
+        return self.dati_completi[self.dati_completi.date == self.dati_completi.date.max()]
 
     @property
     def dati_provinciali_latest(self) -> pd.DataFrame:
-        old_max_days = self.max_days
-        self.max_days = 1
-        data = self.dati_provinciali
-        self.max_days = old_max_days
-        return data
+        # old_max_days = self.max_days
+        # self.max_days = 1
+        # data = self.dati_provinciali
+        # self.max_days = old_max_days
+        # return data
+        return self.dati_provinciali[self.dati_provinciali.date == self.dati_provinciali.date.max()]
 
     def get_last_days_of_data(self, max_days: int, data: pd.DataFrame) -> pd.DataFrame:
         d = datetime.today() - timedelta(days=max_days)
