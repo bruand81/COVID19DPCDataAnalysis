@@ -204,8 +204,9 @@ class VisualServer:
             'incidenza',
             'incidenza_7d',
         ]]
+        codice_regione = data.codice_regione.iloc[0]
         data_table = dt.DataTable(
-            id='rdtp',
+            id=f'rdtp_{codice_regione}',
             columns=(
                 [
                     # {'id': 'formatted_date', 'name': 'Data'},
@@ -543,20 +544,43 @@ class VisualServer:
             html.Hr(),
             self.dati_essenziali(self.data_manager.dati_regionali_latest[
                                      self.data_manager.dati_regionali_latest.codice_regione == self.selected_region],
-                                 'valori_essenziali_regione'),
+                                 f'valori_essenziali_regione_{self.selected_region}'),
             html.Hr(),
             self.immagine_riepilogo(self.data_manager.dati_regionali[
                                         self.data_manager.dati_regionali.codice_regione == self.selected_region]),
             html.Hr(),
             html.H2(children='Situazione province'),
             html.Hr(),
-            html.Div(id="riepilogo_table_province", children=[
+            html.Div(id=f'riepilogo_table_province_{self.selected_region}', children=[
                 html.H3(children='Tabella riepilogativa delle province'),
                 html.Hr(),
                 self.generate_data_province_in_region_table(self.selected_region)
                 # self.generate_table_from_data_province(self.data_manager.dati_provinciali_latest)
             ]),
-            self.immagine_riepilogo_province(self.data_manager.dati_province_in_regione(self.selected_region))
+            self.immagine_riepilogo_province(self.data_manager.dati_province_in_regione(self.selected_region)),
+            html.Hr(),
+            html.H2(children=[
+                'Riepilogo dati in regione ',
+                self.data_manager.dati_regionali_latest[
+                    self.data_manager.dati_regionali_latest.codice_regione == 3].denominazione_regione.iloc[
+                    0]]),
+            html.Hr(),
+            self.dati_essenziali(self.data_manager.dati_regionali_latest[
+                                     self.data_manager.dati_regionali_latest.codice_regione == 3],
+                                 f'valori_essenziali_regione_{3}'),
+            html.Hr(),
+            self.immagine_riepilogo(self.data_manager.dati_regionali[
+                                        self.data_manager.dati_regionali.codice_regione == 3]),
+            html.Hr(),
+            html.H2(children='Situazione province'),
+            html.Hr(),
+            html.Div(id=f'riepilogo_table_province_{3}', children=[
+                html.H3(children='Tabella riepilogativa delle province'),
+                html.Hr(),
+                self.generate_data_province_in_region_table(3)
+                # self.generate_table_from_data_province(self.data_manager.dati_provinciali_latest)
+            ]),
+            self.immagine_riepilogo_province(self.data_manager.dati_province_in_regione(3))
         ]
         )
 
