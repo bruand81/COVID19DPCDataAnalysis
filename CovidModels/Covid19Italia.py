@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import math
 from datetime import datetime, timedelta
+import os
 
 
 class Covid19Italia:
@@ -10,8 +11,11 @@ class Covid19Italia:
     __nazionale_latest = f'{__repo_path}/dati-andamento-nazionale/dpc-covid19-ita-andamento-nazionale-latest.csv'
     __regioni = f'{__repo_path}/dati-regioni/dpc-covid19-ita-regioni.csv'
     __province = f'{__repo_path}/dati-province/dpc-covid19-ita-province.csv'
-    __istat_pcm_link_file = '/Users/bruand/PycharmProjects/COVID19DPCDataAnalysis/files/link_pcm_istat.csv'
-    __istat_file = '/Users/bruand/PycharmProjects/COVID19DPCDataAnalysis/files/DCIS_POPRES1_08102020132111719.csv'
+    __files_folder = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'files')
+    __istat_pcm_link_file = os.path.join(__files_folder, 'link_pcm_istat.csv')
+    __istat_file = os.path.join(__files_folder, 'DCIS_POPRES1_08102020132111719.csv')
+    # __istat_pcm_link_file = '/Users/bruand/PycharmProjects/COVID19DPCDataAnalysis/files/link_pcm_istat.csv'
+    # __istat_file = '/Users/bruand/PycharmProjects/COVID19DPCDataAnalysis/files/DCIS_POPRES1_08102020132111719.csv'
     __istat = pd.DataFrame()
     __variation_columns = ['tamponi', 'casi_testati', 'terapia_intensiva', 'ricoverati_con_sintomi', 'deceduti',
                            'dimessi_guariti', 'isolamento_domiciliare', 'casi_da_screening',
