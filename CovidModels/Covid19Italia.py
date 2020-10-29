@@ -219,38 +219,18 @@ class Covid19Italia:
 
     @property
     def dati_nazionali_latest(self) -> pd.DataFrame:
-        # old_max_days = self.max_days
-        # self.max_days = 1
-        # data = self.dati_nazionali
-        # self.max_days = old_max_days
-        # return data
         return self.dati_nazionali[self.dati_nazionali.date == self.dati_nazionali.date.max()]
 
     @property
     def dati_regionali_latest(self) -> pd.DataFrame:
-        # old_max_days = self.max_days
-        # self.max_days = 1
-        # data = self.dati_regionali
-        # self.max_days = old_max_days
-        # return data
         return self.dati_regionali[self.dati_regionali.date == self.dati_regionali.date.max()]
 
     @property
     def dati_completi_latest(self) -> pd.DataFrame:
-        # old_max_days = self.max_days
-        # self.max_days = 1
-        # data = self.v
-        # self.max_days = old_max_days
-        # return data
         return self.dati_completi[self.dati_completi.date == self.dati_completi.date.max()]
 
     @property
     def dati_provinciali_latest(self) -> pd.DataFrame:
-        # old_max_days = self.max_days
-        # self.max_days = 1
-        # data = self.dati_provinciali
-        # self.max_days = old_max_days
-        # return data
         return self.dati_provinciali[self.dati_provinciali.date == self.dati_provinciali.date.max()]
 
     def get_last_days_of_data(self, max_days: int, data: pd.DataFrame) -> pd.DataFrame:
